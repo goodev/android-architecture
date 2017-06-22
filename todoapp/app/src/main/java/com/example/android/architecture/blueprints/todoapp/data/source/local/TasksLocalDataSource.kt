@@ -35,7 +35,7 @@ import rx.functions.Func1
 /**
  * Concrete implementation of a data source as a db.
  */
-class TasksLocalDataSource// Prevent direct instantiation.
+class TasksLocalDataSource
 private constructor(context: Context,
                     schedulerProvider: BaseSchedulerProvider) : TasksDataSource {
 
@@ -44,8 +44,6 @@ private constructor(context: Context,
   private val mTaskMapperFunction: Func1<Cursor, Task>
 
   init {
-    checkNotNull(context, "context cannot be null")
-    checkNotNull(schedulerProvider, "scheduleProvider cannot be null")
     val dbHelper = TasksDbHelper(context)
     val sqlBrite = SqlBrite.create()
     mDatabaseHelper = sqlBrite.wrapDatabaseHelper(dbHelper, schedulerProvider.io())

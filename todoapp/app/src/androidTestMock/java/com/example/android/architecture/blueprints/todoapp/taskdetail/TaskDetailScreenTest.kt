@@ -31,6 +31,7 @@ import android.support.test.InstrumentationRegistry
 import android.support.test.rule.ActivityTestRule
 import android.support.test.runner.AndroidJUnit4
 import android.test.suitebuilder.annotation.LargeTest
+import android.view.View
 
 import com.example.android.architecture.blueprints.todoapp.Injection
 import com.example.android.architecture.blueprints.todoapp.R
@@ -64,8 +65,8 @@ class TaskDetailScreenTest {
    * from the source Activity. ActivityTestRule has a feature which let's you lazily start the
    * Activity under test, so you can control the Intent that is used to start the target Activity.
    */
-  @Rule
-  var mTaskDetailActivityTestRule = ActivityTestRule(TaskDetailActivity::class.java, true /* Initial touch mode  */,
+  @get:Rule
+  public var mTaskDetailActivityTestRule = ActivityTestRule(TaskDetailActivity::class.java, true /* Initial touch mode  */,
       false /* Lazily launch activity */)
 
   private fun loadActiveTask() {
@@ -94,7 +95,7 @@ class TaskDetailScreenTest {
 
     // Lazily start the Activity from the ActivityTestRule this time to inject the start Intent
     val startIntent = Intent()
-    startIntent.putExtra(TaskDetailActivity.getEXTRA_TASK_ID(), task.id)
+    startIntent.putExtra(TaskDetailActivity.EXTRA_TASK_ID, task.id)
     mTaskDetailActivityTestRule.launchActivity(startIntent)
   }
 
@@ -155,7 +156,7 @@ class TaskDetailScreenTest {
     /**
      * [Task] stub that is added to the fake service API layer.
      */
-    private val COMPLETED_TASK = Task(TASK_TITLE, TASK_DESCRIPTION, true)
+    private val COMPLETED_TASK = Task(TASK_TITLE, TASK_DESCRIPTION, isCompleted = true)
   }
 
 }

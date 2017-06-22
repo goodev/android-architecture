@@ -37,8 +37,10 @@ class TaskDetailActivity : AppCompatActivity() {
     val toolbar = findViewById(R.id.toolbar) as Toolbar
     setSupportActionBar(toolbar)
     val ab = supportActionBar
-    ab!!.setDisplayHomeAsUpEnabled(true)
-    ab.setDisplayShowHomeEnabled(true)
+    ab?.let {
+      ab.setDisplayHomeAsUpEnabled(true)
+      ab.setDisplayShowHomeEnabled(true)
+    }
 
     // Get the requested task id
     val taskId = intent.getStringExtra(EXTRA_TASK_ID)
@@ -66,7 +68,6 @@ class TaskDetailActivity : AppCompatActivity() {
   }
 
   companion object {
-
-    val EXTRA_TASK_ID = "TASK_ID"
+    const val EXTRA_TASK_ID = "TASK_ID"
   }
 }

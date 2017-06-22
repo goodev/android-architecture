@@ -55,7 +55,7 @@ object TestUtils {
    */
   fun getToolbarNavigationContentDescription(
       activity: Activity, @IdRes toolbar1: Int): String {
-    val toolbar = activity.findViewById(toolbar1) as Toolbar
+    val toolbar = activity.findViewById(toolbar1) as Toolbar?
     if (toolbar != null) {
       return toolbar.navigationContentDescription as String
     } else {

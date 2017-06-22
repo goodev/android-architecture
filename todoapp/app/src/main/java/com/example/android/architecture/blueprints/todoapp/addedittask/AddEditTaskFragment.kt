@@ -25,34 +25,31 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-
 import com.example.android.architecture.blueprints.todoapp.R
-
-import com.google.common.base.Preconditions.checkNotNull
 
 /**
  * Main UI for the add task screen. Users can enter a task title and description.
  */
 class AddEditTaskFragment : Fragment(), AddEditTaskContract.View {
 
-  private var mPresenter: AddEditTaskContract.Presenter? = null
+  private lateinit var mPresenter: AddEditTaskContract.Presenter
 
-  private var mTitle: TextView? = null
+  private lateinit var mTitle: TextView
 
-  private var mDescription: TextView? = null
+  private lateinit var mDescription: TextView
 
   override fun onResume() {
     super.onResume()
-    mPresenter!!.subscribe()
+    mPresenter.subscribe()
   }
 
   override fun onPause() {
     super.onPause()
-    mPresenter!!.unsubscribe()
+    mPresenter.unsubscribe()
   }
 
   override fun setPresenter(presenter: AddEditTaskContract.Presenter) {
-    mPresenter = checkNotNull(presenter)
+    mPresenter = presenter
   }
 
   override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -60,9 +57,8 @@ class AddEditTaskFragment : Fragment(), AddEditTaskContract.View {
 
     val fab = activity.findViewById(R.id.fab_edit_task_done) as FloatingActionButton
     fab.setImageResource(R.drawable.ic_done)
-    fab.setOnClickListener { v ->
-      mPresenter!!.saveTask(mTitle!!.text.toString(),
-          mDescription!!.text.toString())
+    fab.setOnClickListener { _ ->
+      mPresenter.saveTask(mTitle.text.toString(), mDescription.text.toString())
     }
   }
 
@@ -76,7 +72,7 @@ class AddEditTaskFragment : Fragment(), AddEditTaskContract.View {
   }
 
   override fun showEmptyTaskError() {
-    Snackbar.make(mTitle!!, getString(R.string.empty_task_message), Snackbar.LENGTH_LONG).show()
+    Snackbar.make(mTitle, getString(R.string.empty_task_message), Snackbar.LENGTH_LONG).show()
   }
 
   override fun showTasksList() {
@@ -85,19 +81,18 @@ class AddEditTaskFragment : Fragment(), AddEditTaskContract.View {
   }
 
   override fun setTitle(title: String) {
-    mTitle!!.text = title
+    mTitle.text = title
   }
 
   override fun setDescription(description: String) {
-    mDescription!!.text = description
+    mDescription.text = description
   }
 
   override val isActive: Boolean
     get() = isAdded
 
   companion object {
-
-    val ARGUMENT_EDIT_TASK_ID = "EDIT_TASK_ID"
+    const val ARGUMENT_EDIT_TASK_ID = "EDIT_TASK_ID"
 
     fun newInstance(): AddEditTaskFragment {
       return AddEditTaskFragment()

@@ -21,34 +21,21 @@ import com.example.android.architecture.blueprints.todoapp.data.Task
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepository
 import com.example.android.architecture.blueprints.todoapp.util.EspressoIdlingResource
 import com.example.android.architecture.blueprints.todoapp.util.schedulers.BaseSchedulerProvider
-import com.google.common.base.Preconditions.checkNotNull
 import rx.Observable
-import rx.functions.Func1
 import rx.subscriptions.CompositeSubscription
 
 /**
  * Listens to user actions from the UI ([StatisticsFragment]), retrieves the data and updates
  * the UI as required.
  */
-class StatisticsPresenter(tasksRepository: TasksRepository,
-                          statisticsView: StatisticsContract.View,
-                          schedulerProvider: BaseSchedulerProvider) : StatisticsContract.Presenter {
+class StatisticsPresenter(val tasksRepository: TasksRepository,
+                          val statisticsView: StatisticsContract.View,
+                          val schedulerProvider: BaseSchedulerProvider) : StatisticsContract.Presenter {
 
-  private val mTasksRepository: TasksRepository
-
-  private val mStatisticsView: StatisticsContract.View
-
-  private val mSchedulerProvider: BaseSchedulerProvider
-
-  private val mSubscriptions: CompositeSubscription
+  private val mSubscriptions: CompositeSubscription = CompositeSubscription()
 
   init {
-    mTasksRepository = checkNotNull(tasksRepository, "tasksRepository cannot be null")
-    mStatisticsView = checkNotNull(statisticsView, "statisticsView cannot be null!")
-    mSchedulerProvider = checkNotNull(schedulerProvider, "schedulerProvider cannot be null")
-
-    mSubscriptions = CompositeSubscription()
-    mStatisticsView.setPresenter(this)
+    this.statisticsView.setPresenter(this)
   }
 
   override fun subscribe() {
@@ -60,21 +47,21 @@ class StatisticsPresenter(tasksRepository: TasksRepository,
   }
 
   private fun loadStatistics() {
-    mStatisticsView.setProgressIndicator(true)
+    statisticsView.setProgressIndicator(true)
 
     // The network request might be handled in a different thread so make sure Espresso knows
     // that the app is busy until the response is handled.
     EspressoIdlingResource.increment() // App is busy until further notice
 
-    val tasks = mTasksRepository
+    val tasks = tasksRepository
         .tasks
-        .flatMap<Task>(Func1<List<Task>, Observable<out Task>> { Observable.from(it) })
-    val completedTasks = tasks.filter(Func1<Task, Boolean> { it.isCompleted }).count()
-    val activeTasks = tasks.filter(Func1<Task, Boolean> { it.isActive }).count()
+        .flatMap<Task>({ Observable.from(it) })
+    val completedTasks = tasks.filter({ it.isCompleted }).count()
+    val activeTasks = tasks.filter({ it.isActive }).count()
     val subscription = Observable
         .zip(completedTasks, activeTasks) { completed, active -> Pair.create(active, completed) }
-        .subscribeOn(mSchedulerProvider.computation())
-        .observeOn(mSchedulerProvider.ui())
+        .subscribeOn(schedulerProvider.computation())
+        .observeOn(schedulerProvider.ui())
         .doOnTerminate {
           if (!EspressoIdlingResource.idlingResource.isIdleNow()) {
             EspressoIdlingResource.decrement() // Set app as idle.
@@ -82,11 +69,12 @@ class StatisticsPresenter(tasksRepository: TasksRepository,
         }
         .subscribe(
             // onNext
-            { stats -> mStatisticsView.showStatistics(stats.first, stats.second) },
+            { stats -> statisticsView.showStatistics(stats.first, stats.second) },
             // onError
-            { throwable -> mStatisticsView.showLoadingStatisticsError() }
+            { throwable -> statisticsView.showLoadingStatisticsError() },
             // onCompleted
-        ) { mStatisticsView.setProgressIndicator(false) }
+            { statisticsView.setProgressIndicator(false) }
+        )
     mSubscriptions.add(subscription)
   }
 }

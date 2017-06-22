@@ -57,7 +57,7 @@ class AppNavigationTest {
    * Rules are interceptors which are executed for each test method and are important building
    * blocks of Junit tests.
    */
-  @Rule
+  @Rule @JvmField
   var mActivityTestRule = ActivityTestRule(TasksActivity::class.java)
 
   @Test

@@ -36,7 +36,7 @@ class TasksActivity : AppCompatActivity() {
 
   private var mDrawerLayout: DrawerLayout? = null
 
-  private var mTasksPresenter: TasksPresenter? = null
+  private lateinit var mTasksPresenter: TasksPresenter
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -46,14 +46,16 @@ class TasksActivity : AppCompatActivity() {
     val toolbar = findViewById(R.id.toolbar) as Toolbar
     setSupportActionBar(toolbar)
     val ab = supportActionBar
-    ab!!.setHomeAsUpIndicator(R.drawable.ic_menu)
-    ab.setDisplayHomeAsUpEnabled(true)
+    ab?.let {
+      ab.setHomeAsUpIndicator(R.drawable.ic_menu)
+      ab.setDisplayHomeAsUpEnabled(true)
+    }
 
     // Set up the navigation drawer.
     mDrawerLayout = findViewById(R.id.drawer_layout) as DrawerLayout
-    mDrawerLayout!!.setStatusBarBackground(R.color.colorPrimaryDark)
-    val navigationView = findViewById(R.id.nav_view) as NavigationView
-    if (navigationView != null) {
+    mDrawerLayout?.setStatusBarBackground(R.color.colorPrimary)
+    val navigationView = findViewById(R.id.nav_view) as NavigationView?
+    navigationView?.let {
       setupDrawerContent(navigationView)
     }
 
@@ -73,12 +75,12 @@ class TasksActivity : AppCompatActivity() {
     // Load previously saved state, if available.
     if (savedInstanceState != null) {
       val currentFiltering = savedInstanceState.getSerializable(CURRENT_FILTERING_KEY) as TasksFilterType
-      mTasksPresenter!!.filtering = currentFiltering
+      mTasksPresenter.filtering = currentFiltering
     }
   }
 
   public override fun onSaveInstanceState(outState: Bundle) {
-    outState.putSerializable(CURRENT_FILTERING_KEY, mTasksPresenter!!.filtering)
+    outState.putSerializable(CURRENT_FILTERING_KEY, mTasksPresenter.filtering)
 
     super.onSaveInstanceState(outState)
   }
@@ -87,7 +89,7 @@ class TasksActivity : AppCompatActivity() {
     when (item.itemId) {
       android.R.id.home -> {
         // Open the navigation drawer when the home icon is selected from the toolbar.
-        mDrawerLayout!!.openDrawer(GravityCompat.START)
+        mDrawerLayout?.openDrawer(GravityCompat.START)
         return true
       }
     }
@@ -101,7 +103,7 @@ class TasksActivity : AppCompatActivity() {
         }
         R.id.statistics_navigation_menu_item -> {
           val intent = Intent(this@TasksActivity, StatisticsActivity::class.java)
-          intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+          intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
           startActivity(intent)
         }
         else -> {
@@ -109,7 +111,7 @@ class TasksActivity : AppCompatActivity() {
       }// Do nothing, we're already on that screen
       // Close the navigation drawer when an item is selected.
       menuItem.isChecked = true
-      mDrawerLayout!!.closeDrawers()
+      mDrawerLayout?.closeDrawers()
       true
     }
   }
@@ -119,7 +121,6 @@ class TasksActivity : AppCompatActivity() {
     get() = EspressoIdlingResource.idlingResource
 
   companion object {
-
-    private val CURRENT_FILTERING_KEY = "CURRENT_FILTERING_KEY"
+    const val CURRENT_FILTERING_KEY = "CURRENT_FILTERING_KEY"
   }
 }

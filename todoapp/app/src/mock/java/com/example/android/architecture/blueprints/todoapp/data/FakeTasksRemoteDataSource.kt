@@ -17,11 +17,9 @@
 package com.example.android.architecture.blueprints.todoapp.data
 
 import android.support.annotation.VisibleForTesting
-
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksDataSource
-import java.util.LinkedHashMap
-
 import rx.Observable
+import java.util.*
 
 /**
  * Implementation of a remote data source with static access to the data for easy testing.

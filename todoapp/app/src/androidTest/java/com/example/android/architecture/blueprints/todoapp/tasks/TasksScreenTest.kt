@@ -73,7 +73,7 @@ class TasksScreenTest {
    * Rules are interceptors which are executed for each test method and are important building
    * blocks of Junit tests.
    */
-  @Rule
+  @Rule @JvmField
   var mTasksActivityTestRule: ActivityTestRule<TasksActivity> = object : ActivityTestRule<TasksActivity>(TasksActivity::class.java) {
 
     /**

@@ -22,22 +22,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-
 import com.example.android.architecture.blueprints.todoapp.R
-
-import com.google.common.base.Preconditions.checkNotNull
 
 /**
  * Main UI for the statistics screen.
  */
 class StatisticsFragment : Fragment(), StatisticsContract.View {
 
-  private var mStatisticsTV: TextView? = null
+  private lateinit var mStatisticsTV: TextView
 
-  private var mPresenter: StatisticsContract.Presenter? = null
+  private lateinit var mPresenter: StatisticsContract.Presenter
 
   override fun setPresenter(presenter: StatisticsContract.Presenter) {
-    mPresenter = checkNotNull(presenter)
+    mPresenter = presenter
   }
 
   override fun onCreateView(inflater: LayoutInflater?, container: ViewGroup?,
@@ -49,33 +46,33 @@ class StatisticsFragment : Fragment(), StatisticsContract.View {
 
   override fun onResume() {
     super.onResume()
-    mPresenter!!.subscribe()
+    mPresenter.subscribe()
   }
 
   override fun onPause() {
     super.onPause()
-    mPresenter!!.unsubscribe()
+    mPresenter.unsubscribe()
   }
 
   override fun setProgressIndicator(active: Boolean) {
     if (active) {
-      mStatisticsTV!!.text = getString(R.string.loading)
+      mStatisticsTV.text = getString(R.string.loading)
     }
   }
 
   override fun showStatistics(numberOfIncompleteTasks: Int, numberOfCompletedTasks: Int) {
     if (numberOfCompletedTasks == 0 && numberOfIncompleteTasks == 0) {
-      mStatisticsTV!!.text = resources.getString(R.string.statistics_no_tasks)
+      mStatisticsTV.text = resources.getString(R.string.statistics_no_tasks)
     } else {
       val displayString = resources.getString(R.string.statistics_active_tasks) + " "
       (+numberOfIncompleteTasks).toString() + "\n" + resources.getString(
           R.string.statistics_completed_tasks) + " " + numberOfCompletedTasks
-      mStatisticsTV!!.text = displayString
+      mStatisticsTV.text = displayString
     }
   }
 
   override fun showLoadingStatisticsError() {
-    mStatisticsTV!!.text = resources.getString(R.string.statistics_error)
+    mStatisticsTV.text = resources.getString(R.string.statistics_error)
   }
 
   override val isActive: Boolean

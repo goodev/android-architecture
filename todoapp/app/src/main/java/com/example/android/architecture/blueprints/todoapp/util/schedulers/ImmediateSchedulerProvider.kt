@@ -6,7 +6,7 @@ import rx.schedulers.Schedulers
 /**
  * Implementation of the [BaseSchedulerProvider] making all [Scheduler]s immediate.
  */
-class ImmediateSchedulerProvider : BaseSchedulerProvider {
+object ImmediateSchedulerProvider : BaseSchedulerProvider {
 
   override fun computation(): Scheduler {
     return Schedulers.immediate()

@@ -30,19 +30,14 @@ import java.util.*
  * obtained from the server, by using the remote data source only if the local database doesn't
  * exist or is empty.
  */
-open class TasksRepository// Prevent direct instantiation.
-private constructor(tasksRemoteDataSource: TasksDataSource,
-                    tasksLocalDataSource: TasksDataSource) : TasksDataSource {
-
-  private val mTasksRemoteDataSource: TasksDataSource
-
-  private val mTasksLocalDataSource: TasksDataSource
+open class TasksRepository(private val tasksRemoteDataSource: TasksDataSource,
+                           private val tasksLocalDataSource: TasksDataSource) : TasksDataSource {
 
   /**
    * This variable has package local visibility so it can be accessed from tests.
    */
   @VisibleForTesting
-  val mCachedTasks: MutableMap<String, Task>? = LinkedHashMap<String, Task>()
+  var mCachedTasks: MutableMap<String, Task>? = null
 
   /**
    * Marks the cache as invalid, to force an update the next time data is requested. This variable
@@ -50,11 +45,6 @@ private constructor(tasksRemoteDataSource: TasksDataSource,
    */
   @VisibleForTesting
   internal var mCacheIsDirty = false
-
-  init {
-    mTasksRemoteDataSource = checkNotNull(tasksRemoteDataSource)
-    mTasksLocalDataSource = checkNotNull(tasksLocalDataSource)
-  }
 
   /**
    * Gets tasks from cache, local data source (SQLite) or remote data source, whichever is
@@ -64,9 +54,12 @@ private constructor(tasksRemoteDataSource: TasksDataSource,
       // Query the local storage if available. If not, query the network.
   val tasks: Observable<List<Task>>
     get() {
-      if (!mCacheIsDirty) {
-        return Observable.from(mCachedTasks!!.values).toList()
+      if (mCachedTasks != null && !mCacheIsDirty) {
+        return Observable.from(mCachedTasks?.values).toList()
+      } else if (mCachedTasks == null) {
+        mCachedTasks = mutableMapOf()
       }
+
 
       val remoteTasks = andSaveRemoteTasks
 
@@ -81,40 +74,46 @@ private constructor(tasksRemoteDataSource: TasksDataSource,
     }
 
   private val andCacheLocalTasks: Observable<List<Task>>
-    get() = mTasksLocalDataSource.tasks
+    get() = tasksLocalDataSource.tasks
         .flatMap { tasks ->
           Observable.from(tasks)
-              .doOnNext { task -> mCachedTasks!!.put(task.id, task) }
+              .doOnNext { task -> mCachedTasks?.put(task.id, task) }
               .toList()
         }
 
   private val andSaveRemoteTasks: Observable<List<Task>>
-    get() = mTasksRemoteDataSource
+    get() = tasksRemoteDataSource
         .tasks
         .flatMap { tasks ->
           Observable.from(tasks).doOnNext { task ->
-            mTasksLocalDataSource.saveTask(task)
-            mCachedTasks!!.put(task.id, task)
+            tasksLocalDataSource.saveTask(task)
+            mCachedTasks?.put(task.id, task)
           }.toList()
         }
         .doOnCompleted { mCacheIsDirty = false }
 
   override fun saveTask(task: Task) {
-    checkNotNull(task)
-    mTasksRemoteDataSource.saveTask(task)
-    mTasksLocalDataSource.saveTask(task)
+    tasksRemoteDataSource.saveTask(task)
+    tasksLocalDataSource.saveTask(task)
 
-    mCachedTasks!!.put(task.id, task)
+    if (mCachedTasks == null) {
+      mCachedTasks = mutableMapOf()
+    }
+
+    mCachedTasks?.put(task.id, task)
   }
 
   override fun completeTask(task: Task) {
-    checkNotNull(task)
-    mTasksRemoteDataSource.completeTask(task)
-    mTasksLocalDataSource.completeTask(task)
+    tasksRemoteDataSource.completeTask(task)
+    tasksLocalDataSource.completeTask(task)
 
     val completedTask = Task(task.title, task.description, task.id, true)
 
-    mCachedTasks!!.put(task.id, completedTask)
+    if (mCachedTasks == null) {
+      mCachedTasks = mutableMapOf()
+    }
+
+    mCachedTasks?.put(task.id, completedTask)
   }
 
   override fun completeTask(taskId: String) {
@@ -126,13 +125,16 @@ private constructor(tasksRemoteDataSource: TasksDataSource,
   }
 
   override fun activateTask(task: Task) {
-    checkNotNull(task)
-    mTasksRemoteDataSource.activateTask(task)
-    mTasksLocalDataSource.activateTask(task)
+    tasksRemoteDataSource.activateTask(task)
+    tasksLocalDataSource.activateTask(task)
 
     val activeTask = Task(task.title, task.description, task.id)
 
-    mCachedTasks!!.put(task.id, activeTask)
+    if (mCachedTasks == null) {
+      mCachedTasks = mutableMapOf()
+    }
+
+    mCachedTasks?.put(task.id, activeTask)
   }
 
   override fun activateTask(taskId: String) {
@@ -144,10 +146,14 @@ private constructor(tasksRemoteDataSource: TasksDataSource,
   }
 
   override fun clearCompletedTasks() {
-    mTasksRemoteDataSource.clearCompletedTasks()
-    mTasksLocalDataSource.clearCompletedTasks()
+    tasksRemoteDataSource.clearCompletedTasks()
+    tasksLocalDataSource.clearCompletedTasks()
 
-    val it = mCachedTasks!!.entries.iterator()
+    if (mCachedTasks == null) {
+      mCachedTasks = mutableMapOf()
+    }
+
+    val it = mCachedTasks?.entries?.iterator()!!
     while (it.hasNext()) {
       val entry = it.next()
       if (entry.value.isCompleted) {
@@ -161,8 +167,6 @@ private constructor(tasksRemoteDataSource: TasksDataSource,
    * uses the network data source. This is done to simplify the sample.
    */
   override fun getTask(taskId: String): Observable<Task> {
-    checkNotNull(taskId)
-
     val cachedTask = getTaskWithId(taskId)
 
     // Respond immediately with cache if available
@@ -171,15 +175,17 @@ private constructor(tasksRemoteDataSource: TasksDataSource,
     }
 
     // Load from server/persisted if needed.
-
+    if (mCachedTasks == null) {
+      mCachedTasks = mutableMapOf()
+    }
 
     // Is the task in the local data source? If not, query the network.
     val localTask = getTaskWithIdFromLocalRepository(taskId)
-    val remoteTask = mTasksRemoteDataSource
+    val remoteTask = tasksRemoteDataSource
         .getTask(taskId)
         .doOnNext { task ->
-          mTasksLocalDataSource.saveTask(task)
-          mCachedTasks!!.put(task.id, task)
+          tasksLocalDataSource.saveTask(task)
+          mCachedTasks?.put(task.id, task)
         }
 
     return Observable.concat(localTask, remoteTask).first()
@@ -196,22 +202,26 @@ private constructor(tasksRemoteDataSource: TasksDataSource,
   }
 
   override fun deleteAllTasks() {
-    mTasksRemoteDataSource.deleteAllTasks()
-    mTasksLocalDataSource.deleteAllTasks()
+    tasksRemoteDataSource.deleteAllTasks()
+    tasksLocalDataSource.deleteAllTasks()
 
-    mCachedTasks!!.clear()
+    if (mCachedTasks == null) {
+      mCachedTasks = mutableMapOf()
+    }
+
+    mCachedTasks?.clear()
   }
 
   override fun deleteTask(taskId: String) {
-    mTasksRemoteDataSource.deleteTask(checkNotNull(taskId))
-    mTasksLocalDataSource.deleteTask(checkNotNull(taskId))
+    tasksRemoteDataSource.deleteTask(checkNotNull(taskId))
+    tasksLocalDataSource.deleteTask(checkNotNull(taskId))
 
-    mCachedTasks!!.remove(taskId)
+    mCachedTasks?.remove(taskId)
   }
 
   private fun getTaskWithId(id: String): Task? {
     checkNotNull(id)
-    if (mCachedTasks == null || mCachedTasks!!.isEmpty()) {
+    if (mCachedTasks ==  null || mCachedTasks?.isEmpty()!!) {
       return null
     } else {
       return mCachedTasks!![id]
@@ -219,15 +229,15 @@ private constructor(tasksRemoteDataSource: TasksDataSource,
   }
 
   internal fun getTaskWithIdFromLocalRepository(taskId: String): Observable<Task> {
-    return mTasksLocalDataSource
+    return tasksLocalDataSource
         .getTask(taskId)
-        .doOnNext { task -> mCachedTasks!!.put(taskId, task) }
+        .doOnNext { task -> mCachedTasks?.put(taskId, task) }
         .first()
   }
 
   companion object {
 
-     var INSTANCE: TasksRepository? = null
+    var INSTANCE: TasksRepository? = null
 
     /**
      * Returns the single instance of this class, creating it if necessary.

@@ -17,7 +17,6 @@
 package com.example.android.architecture.blueprints.todoapp.util
 
 import android.support.test.espresso.IdlingResource
-import com.google.common.base.Preconditions.checkNotNull
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -30,27 +29,15 @@ import java.util.concurrent.atomic.AtomicInteger
  * This class can then be used to wrap up operations that while in progress should block tests from
  * accessing the UI.
  */
-class SimpleCountingIdlingResource
-/**
- * Creates a SimpleCountingIdlingResource
-
- * @param resourceName the resource name this resource should report to Espresso.
- */
-(resourceName: String) : IdlingResource {
-
-  private val mResourceName: String
+class SimpleCountingIdlingResource(val resourceName: String) : IdlingResource {
 
   private val counter = AtomicInteger(0)
 
   // written from main thread, read from any thread.
   @Volatile private var resourceCallback: IdlingResource.ResourceCallback? = null
 
-  init {
-    mResourceName = checkNotNull(resourceName)
-  }
-
   override fun getName(): String {
-    return mResourceName
+    return resourceName
   }
 
   override fun isIdleNow(): Boolean {
@@ -79,9 +66,7 @@ class SimpleCountingIdlingResource
     val counterVal = counter.decrementAndGet()
     if (counterVal == 0) {
       // we've gone from non-zero to zero. That means we're idle now! Tell espresso.
-      if (null != resourceCallback) {
-        resourceCallback!!.onTransitionToIdle()
-      }
+      resourceCallback?.onTransitionToIdle()
     }
 
     if (counterVal < 0) {

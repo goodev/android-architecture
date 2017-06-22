@@ -34,7 +34,7 @@ import com.example.android.architecture.blueprints.todoapp.util.addFragmentToAct
  */
 class StatisticsActivity : AppCompatActivity() {
 
-  private var mDrawerLayout: DrawerLayout? = null
+  private lateinit var mDrawerLayout: DrawerLayout
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -45,24 +45,23 @@ class StatisticsActivity : AppCompatActivity() {
     val toolbar = findViewById(R.id.toolbar) as Toolbar
     setSupportActionBar(toolbar)
     val ab = supportActionBar
-    ab!!.setTitle(R.string.statistics_title)
-    ab.setHomeAsUpIndicator(R.drawable.ic_menu)
-    ab.setDisplayHomeAsUpEnabled(true)
+    ab?.let {
+      ab.setTitle(R.string.statistics_title)
+      ab.setHomeAsUpIndicator(R.drawable.ic_menu)
+      ab.setDisplayHomeAsUpEnabled(true)
+    }
 
     // Set up the navigation drawer.
     mDrawerLayout = findViewById(R.id.drawer_layout) as DrawerLayout
-    mDrawerLayout!!.setStatusBarBackground(R.color.colorPrimaryDark)
+    mDrawerLayout.setStatusBarBackground(R.color.colorPrimaryDark)
     val navigationView = findViewById(R.id.nav_view) as NavigationView
-    if (navigationView != null) {
-      setupDrawerContent(navigationView)
-    }
+    setupDrawerContent(navigationView)
 
     var statisticsFragment: StatisticsFragment? = supportFragmentManager
         .findFragmentById(R.id.contentFrame) as StatisticsFragment?
     if (statisticsFragment == null) {
       statisticsFragment = StatisticsFragment.newInstance()
-      addFragmentToActivity(
-          statisticsFragment, R.id.contentFrame)
+      addFragmentToActivity(statisticsFragment, R.id.contentFrame)
     }
 
     StatisticsPresenter(
@@ -74,7 +73,7 @@ class StatisticsActivity : AppCompatActivity() {
     when (item.itemId) {
       android.R.id.home -> {
         // Open the navigation drawer when the home icon is selected from the toolbar.
-        mDrawerLayout!!.openDrawer(GravityCompat.START)
+        mDrawerLayout.openDrawer(GravityCompat.START)
         return true
       }
     }
@@ -86,7 +85,7 @@ class StatisticsActivity : AppCompatActivity() {
       when (menuItem.itemId) {
         R.id.list_navigation_menu_item -> {
           val intent = Intent(this@StatisticsActivity, TasksActivity::class.java)
-          intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+          intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
           startActivity(intent)
         }
         R.id.statistics_navigation_menu_item -> {
@@ -96,7 +95,7 @@ class StatisticsActivity : AppCompatActivity() {
       }// Do nothing, we're already on that screen
       // Close the navigation drawer when an item is selected.
       menuItem.isChecked = true
-      mDrawerLayout!!.closeDrawers()
+      mDrawerLayout.closeDrawers()
       true
     }
   }

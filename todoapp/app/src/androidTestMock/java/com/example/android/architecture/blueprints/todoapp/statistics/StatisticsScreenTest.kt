@@ -55,8 +55,8 @@ class StatisticsScreenTest {
    * Rules are interceptors which are executed for each test method and are important building
    * blocks of Junit tests.
    */
-  @Rule
-  var mStatisticsActivityTestRule = ActivityTestRule(StatisticsActivity::class.java, true, false)
+  @Rule @JvmField
+  public var mStatisticsActivityTestRule = ActivityTestRule(StatisticsActivity::class.java, true, false)
 
   /**
    * Setup your test fixture with a fake task id. The [TaskDetailActivity] is started with
@@ -73,8 +73,8 @@ class StatisticsScreenTest {
     // Given some tasks
     TasksRepository.destroyInstance()
     val repository = Injection.provideTasksRepository(InstrumentationRegistry.getContext())
-    repository.saveTask(Task("Title1", "", false))
-    repository.saveTask(Task("Title2", "", true))
+    repository.saveTask(Task("Title1", ""))
+    repository.saveTask(Task("Title2", "", isCompleted = true))
 
     // Lazily start the Activity from the ActivityTestRule
     val startIntent = Intent()

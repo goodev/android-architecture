@@ -46,22 +46,22 @@ import org.junit.Assert.assertThat
 @LargeTest
 class TasksLocalDataSourceTest {
 
-  private var mSchedulerProvider: BaseSchedulerProvider? = null
+  private lateinit var mSchedulerProvider: BaseSchedulerProvider
 
-  private var mLocalDataSource: TasksLocalDataSource? = null
+  private lateinit var mLocalDataSource: TasksLocalDataSource
 
   @Before
   fun setup() {
     TasksLocalDataSource.destroyInstance()
-    mSchedulerProvider = ImmediateSchedulerProvider()
+    mSchedulerProvider = ImmediateSchedulerProvider
 
     mLocalDataSource = TasksLocalDataSource.getInstance(
-        InstrumentationRegistry.getTargetContext(), mSchedulerProvider!!)
+        InstrumentationRegistry.getTargetContext(), mSchedulerProvider)
   }
 
   @After
   fun cleanUp() {
-    mLocalDataSource!!.deleteAllTasks()
+    mLocalDataSource.deleteAllTasks()
   }
 
   @Test
@@ -75,11 +75,11 @@ class TasksLocalDataSourceTest {
     val newTask = Task(TITLE, "")
 
     // When saved into the persistent repository
-    mLocalDataSource!!.saveTask(newTask)
+    mLocalDataSource.saveTask(newTask)
 
     // Then the task can be retrieved from the persistent repository
     val testSubscriber = TestSubscriber<Task>()
-    mLocalDataSource!!.getTask(newTask.id).subscribe(testSubscriber)
+    mLocalDataSource.getTask(newTask.id).subscribe(testSubscriber)
     testSubscriber.assertValue(newTask)
   }
 
@@ -87,14 +87,14 @@ class TasksLocalDataSourceTest {
   fun completeTask_retrievedTaskIsComplete() {
     // Given a new task in the persistent repository
     val newTask = Task(TITLE, "")
-    mLocalDataSource!!.saveTask(newTask)
+    mLocalDataSource.saveTask(newTask)
 
     // When completed in the persistent repository
-    mLocalDataSource!!.completeTask(newTask)
+    mLocalDataSource.completeTask(newTask)
 
     // Then the task can be retrieved from the persistent repository and is complete
     val testSubscriber = TestSubscriber<Task>()
-    mLocalDataSource!!.getTask(newTask.id).subscribe(testSubscriber)
+    mLocalDataSource.getTask(newTask.id).subscribe(testSubscriber)
     testSubscriber.assertValueCount(1)
     val result = testSubscriber.onNextEvents[0]
     assertThat(result.isCompleted, `is`(true))
@@ -104,15 +104,15 @@ class TasksLocalDataSourceTest {
   fun activateTask_retrievedTaskIsActive() {
     // Given a new completed task in the persistent repository
     val newTask = Task(TITLE, "")
-    mLocalDataSource!!.saveTask(newTask)
-    mLocalDataSource!!.completeTask(newTask)
+    mLocalDataSource.saveTask(newTask)
+    mLocalDataSource.completeTask(newTask)
 
     // When activated in the persistent repository
-    mLocalDataSource!!.activateTask(newTask)
+    mLocalDataSource.activateTask(newTask)
 
     // Then the task can be retrieved from the persistent repository and is active
     val testSubscriber = TestSubscriber<Task>()
-    mLocalDataSource!!.getTask(newTask.id).subscribe(testSubscriber)
+    mLocalDataSource.getTask(newTask.id).subscribe(testSubscriber)
     testSubscriber.assertValueCount(1)
     val result = testSubscriber.onNextEvents[0]
     assertThat(result.isActive, `is`(true))
@@ -123,20 +123,20 @@ class TasksLocalDataSourceTest {
   fun clearCompletedTask_taskNotRetrievable() {
     // Given 2 new completed tasks and 1 active task in the persistent repository
     val newTask1 = Task(TITLE, "")
-    mLocalDataSource!!.saveTask(newTask1)
-    mLocalDataSource!!.completeTask(newTask1)
+    mLocalDataSource.saveTask(newTask1)
+    mLocalDataSource.completeTask(newTask1)
     val newTask2 = Task(TITLE2, "")
-    mLocalDataSource!!.saveTask(newTask2)
-    mLocalDataSource!!.completeTask(newTask2)
+    mLocalDataSource.saveTask(newTask2)
+    mLocalDataSource.completeTask(newTask2)
     val newTask3 = Task(TITLE3, "")
-    mLocalDataSource!!.saveTask(newTask3)
+    mLocalDataSource.saveTask(newTask3)
 
     // When completed tasks are cleared in the repository
-    mLocalDataSource!!.clearCompletedTasks()
+    mLocalDataSource.clearCompletedTasks()
 
     // Then the completed tasks cannot be retrieved and the active one can
     val testSubscriber = TestSubscriber<List<Task>>()
-    mLocalDataSource!!.tasks.subscribe(testSubscriber)
+    mLocalDataSource.tasks.subscribe(testSubscriber)
     val result = testSubscriber.onNextEvents[0]
     assertThat(result, not(hasItems(newTask1, newTask2)))
   }
@@ -145,14 +145,14 @@ class TasksLocalDataSourceTest {
   fun deleteAllTasks_emptyListOfRetrievedTask() {
     // Given a new task in the persistent repository and a mocked callback
     val newTask = Task(TITLE, "")
-    mLocalDataSource!!.saveTask(newTask)
+    mLocalDataSource.saveTask(newTask)
 
     // When all tasks are deleted
-    mLocalDataSource!!.deleteAllTasks()
+    mLocalDataSource.deleteAllTasks()
 
     // Then the retrieved tasks is an empty list
     val testSubscriber = TestSubscriber<List<Task>>()
-    mLocalDataSource!!.tasks.subscribe(testSubscriber)
+    mLocalDataSource.tasks.subscribe(testSubscriber)
     val result = testSubscriber.onNextEvents[0]
     assertThat(result.isEmpty(), `is`(true))
   }
@@ -161,13 +161,13 @@ class TasksLocalDataSourceTest {
   fun getTasks_retrieveSavedTasks() {
     // Given 2 new tasks in the persistent repository
     val newTask1 = Task(TITLE, "")
-    mLocalDataSource!!.saveTask(newTask1)
+    mLocalDataSource.saveTask(newTask1)
     val newTask2 = Task(TITLE, "")
-    mLocalDataSource!!.saveTask(newTask2)
+    mLocalDataSource.saveTask(newTask2)
 
     // Then the tasks can be retrieved from the persistent repository
     val testSubscriber = TestSubscriber<List<Task>>()
-    mLocalDataSource!!.tasks.subscribe(testSubscriber)
+    mLocalDataSource.tasks.subscribe(testSubscriber)
     val result = testSubscriber.onNextEvents[0]
     assertThat(result, hasItems(newTask1, newTask2))
   }
@@ -177,7 +177,7 @@ class TasksLocalDataSourceTest {
     //Given that no task has been saved
     //When querying for a task, null is returned.
     val testSubscriber = TestSubscriber<Task>()
-    mLocalDataSource!!.getTask("1").subscribe(testSubscriber)
+    mLocalDataSource.getTask("1").subscribe(testSubscriber)
     testSubscriber.assertValue(null)
   }
 

@@ -1,63 +1,58 @@
-# TODO-MVP-RXJAVA
+# TODO-MVP-RXJAVA-KOTLIN
 
-Project owners: [Erik Hellman](https://github.com/erikhellman) & [Florina Muntenescu (upday)](https://github.com/florina-muntenescu)
+Project owners: [Goodev](https://github.com/goodev).
+
+[TODO-MVP-RXJAVA](https://github.com/googlesamples/android-architecture/tree/todo-mvp-rxjava) Project owners: [Erik Hellman](https://github.com/erikhellman) & [Florina Muntenescu (upday)](https://github.com/florina-muntenescu).
 
 ### Summary
 
-This sample is based on the TODO-MVP project and uses RxJava for communication between the data model and presenter layers.
+This sample is based on the [TODO-MVP-RXJAVA](https://github.com/googlesamples/android-architecture/tree/todo-mvp-rxjava) project and uses Android Studio 3.0 to convert the Java code to Kotlin.
 
 Compared to the TODO-MVP, both the Presenter contracts and the implementation of the Views stay the same. The changes are done to the data model layer and in the implementation of the Presenters. For the sake of simplicity we decided to keep the RxJava usage minimal, leaving optimizations like RxJava caching aside.
 
 The data model layer exposes RxJava ``Observable`` streams as a way of retrieving tasks. The ``TasksDataSource`` interface contains methods like:
 
-```java
-Observable<List<Task>> getTasks();
+```kotlin
+  val tasks: Observable<List<Task>>
 
-Observable<Task> getTask(@NonNull String taskId);
+  fun getTask(taskId: String): Observable<Task>
 ```
 
 This is implemented in ``TasksLocalDataSource`` with the help of [SqlBrite](https://github.com/square/sqlbrite). The result of queries to the database being easily exposed as streams of data.
 
-```java
-@Override
-public Observable<List<Task>> getTasks() {
-    ...
-    return mDatabaseHelper.createQuery(TaskEntry.TABLE_NAME, sql)
-            .mapToList(mTaskMapperFunction);
-}
+```kotlin
+  override val tasks: Observable<List<Task>>
+    get() {
+      val projection = arrayOf(TaskEntry.COLUMN_NAME_ENTRY_ID, TaskEntry.COLUMN_NAME_TITLE, TaskEntry.COLUMN_NAME_DESCRIPTION, TaskEntry.COLUMN_NAME_COMPLETED)
+      val sql = String.format("SELECT %s FROM %s", TextUtils.join(",", projection), TaskEntry.TABLE_NAME)
+      return mDatabaseHelper.createQuery(TaskEntry.TABLE_NAME, sql)
+          .mapToList(mTaskMapperFunction)
+    }
 ```
 
 The ``TasksRepository`` combines the streams of data from the local and the remote data sources, exposing it to whoever needs it. In our project, the Presenters and the unit tests are actually the consumers of these ``Observable``s.
 
 The Presenters subscribe to the ``Observable``s from the ``TasksRepository`` and after manipulating the data, they are the ones that decide what the views should display, in the ``.subscribe(...)`` method. Also, the Presenters are the ones that decide on the working threads. For example, in the ``StatisticsPresenter``, we decide on which thread we should do the computation of the active and completed tasks and what should happen when this computation is done: show the statistics, if all is ok; show loading statistics error, if needed; and telling the view that the loading indicator should not be visible anymore.
 
-```java
+```kotlin
 ...
-Subscription subscription = Observable
-        .zip(completedTasks, activeTasks, new Func2<Integer, Integer, Pair<Integer, Integer>>() {
-            @Override
-            public Pair<Integer, Integer> call(Integer completed, Integer active) {
-                return Pair.create(active, completed);
-            }
-        })
-        .subscribeOn(mSchedulerProvider.computation())
-        .observeOn(mSchedulerProvider.ui())
-        .subscribe(new Action1<Pair<Integer, Integer>>() {
-            @Override
-            public void call(Pair<Integer, Integer> stats) {
-                mStatisticsView.showStatistics(stats.first, stats.second);
-            }
-        }, new Action1<Throwable>() {
-            @Override
-            public void call(Throwable throwable) {
-                mStatisticsView.showLoadingStatisticsError();
-            }
-        }, new Action0() {
-            @Override
-            public void call() {
-                mStatisticsView.setProgressIndicator(false);
-            }
-        });
+    val subscription = Observable
+        .zip(completedTasks, activeTasks) { completed, active -> Pair.create(active, completed) }
+        .subscribeOn(schedulerProvider.computation())
+        .observeOn(schedulerProvider.ui())
+        .doOnTerminate {
+          if (!EspressoIdlingResource.idlingResource.isIdleNow()) {
+            EspressoIdlingResource.decrement() // Set app as idle.
+          }
+        }
+        .subscribe(
+            // onNext
+            { stats -> statisticsView.showStatistics(stats.first, stats.second) },
+            // onError
+            { throwable -> statisticsView.showLoadingStatisticsError() },
+            // onCompleted
+            { statisticsView.setProgressIndicator(false) }
+        )
 ```
 
 Handling of the working threads is done with the help of RxJava's `Scheduler`s. For example, the creation of the database together with all the database queries is happening on the IO thread. The `subscribeOn` and `observeOn` methods are used in the Presenter classes to define that the `Observer`s will operate on the computation thread and that the observing is on the main thread.
@@ -67,12 +62,12 @@ Handling of the working threads is done with the help of RxJava's `Scheduler`s. 
 * [RxJava](https://github.com/ReactiveX/RxJava)
 * [RxAndroid](https://github.com/ReactiveX/RxAndroid)
 * [SqlBrite](https://github.com/square/sqlbrite)
+* [Kotlin](https://kotlinlang.org)
 
-### Java 8 Compatibility
-
-This project uses [lambda expressions](https://docs.oracle.com/javase/tutorial/java/javaOO/lambdaexpressions.html) extensively, one of the features of [Java 8](https://developer.android.com/guide/platform/j8-jack.html). To check out how the translation to lambdas was made, check out [this commit](https://github.com/googlesamples/android-architecture/pull/240/commits/929f63e3657be8705679c46c75e2625dc44a5b28), where lambdas and the Jack compiler were enabled.
 
 ## Features
+
+### Kotlin
 
 ### Complexity - understandability
 

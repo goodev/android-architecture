@@ -21,16 +21,13 @@ import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepo
 import com.example.android.architecture.blueprints.todoapp.util.schedulers.BaseSchedulerProvider
 import com.example.android.architecture.blueprints.todoapp.util.schedulers.ImmediateSchedulerProvider
 import com.google.common.collect.Lists
-
+import com.nhaarman.mockito_kotlin.whenever
+import com.nhaarman.mockito_kotlin.verify
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
-
 import rx.Observable
-
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 
 /**
  * Unit tests for the implementation of [StatisticsPresenter]
@@ -38,14 +35,15 @@ import org.mockito.Mockito.`when`
 class StatisticsPresenterTest {
 
   @Mock
-  private val mTasksRepository: TasksRepository? = null
+  private lateinit var mTasksRepository: TasksRepository
 
   @Mock
-  private val mStatisticsView: StatisticsContract.View? = null
+  private lateinit var mStatisticsView: StatisticsContract.View
 
-  private var mSchedulerProvider: BaseSchedulerProvider? = null
+  private lateinit var mSchedulerProvider: BaseSchedulerProvider
 
-  private var mStatisticsPresenter: StatisticsPresenter? = null
+  private lateinit var mStatisticsPresenter: StatisticsPresenter
+  private lateinit var TASKS: MutableList<Task>
 
   @Before
   fun setupStatisticsPresenter() {
@@ -54,64 +52,64 @@ class StatisticsPresenterTest {
     MockitoAnnotations.initMocks(this)
 
     // Make the sure that all schedulers are immediate.
-    mSchedulerProvider = ImmediateSchedulerProvider()
+    mSchedulerProvider = ImmediateSchedulerProvider
 
     // Get a reference to the class under test
-    mStatisticsPresenter = StatisticsPresenter(mTasksRepository!!, mStatisticsView!!,
-        mSchedulerProvider!!)
+    mStatisticsPresenter = StatisticsPresenter(mTasksRepository, mStatisticsView,
+        mSchedulerProvider)
 
     // The presenter won't update the view unless it's active.
-    `when`(mStatisticsView.isActive).thenReturn(true)
+    whenever(mStatisticsView.isActive).thenReturn(true)
 
     // We subscribe the tasks to 3, with one active and two completed
     TASKS = Lists.newArrayList(Task("Title1", "Description1"),
-        Task("Title2", "Description2", true), Task("Title3", "Description3", true))
+        Task("Title2", "Description2", isCompleted = true), Task("Title3", "Description3", isCompleted = true))
   }
 
   @Test
   fun createPresenter_setsThePresenterToView() {
     // Get a reference to the class under test
-    mStatisticsPresenter = StatisticsPresenter(mTasksRepository!!, mStatisticsView!!,
-        mSchedulerProvider!!)
+    mStatisticsPresenter = StatisticsPresenter(mTasksRepository, mStatisticsView,
+        mSchedulerProvider)
 
     // Then the presenter is set to the view
-    verify(mStatisticsView).setPresenter(mStatisticsPresenter!!)
+    verify(mStatisticsView).setPresenter(mStatisticsPresenter)
   }
 
   @Test
   fun loadEmptyTasksFromRepository_CallViewToDisplay() {
     // Given an initialized StatisticsPresenter with no tasks
-    TASKS!!.clear()
-    setTasksAvailable(TASKS!!)
+    TASKS.clear()
+    setTasksAvailable(TASKS)
 
     // When loading of Tasks is requested
-    mStatisticsPresenter!!.subscribe()
+    mStatisticsPresenter.subscribe()
 
     //Then progress indicator is shown
-    verify(mStatisticsView)?.setProgressIndicator(true)
+    verify(mStatisticsView).setProgressIndicator(true)
 
     // Callback is captured and invoked with stubbed tasks
     verify<TasksRepository>(mTasksRepository).tasks
 
     // Then progress indicator is hidden and correct data is passed on to the view
-    verify(mStatisticsView)?.setProgressIndicator(false)
-    verify(mStatisticsView)?.showStatistics(0, 0)
+    verify(mStatisticsView).setProgressIndicator(false)
+    verify(mStatisticsView).showStatistics(0, 0)
   }
 
   @Test
   fun loadNonEmptyTasksFromRepository_CallViewToDisplay() {
     // Given an initialized StatisticsPresenter with 1 active and 2 completed tasks
-    setTasksAvailable(TASKS!!)
+    setTasksAvailable(TASKS)
 
     // When loading of Tasks is requested
-    mStatisticsPresenter!!.subscribe()
+    mStatisticsPresenter.subscribe()
 
     //Then progress indicator is shown
-    verify(mStatisticsView)?.setProgressIndicator(true)
+    verify(mStatisticsView).setProgressIndicator(true)
 
     // Then progress indicator is hidden and correct data is passed on to the view
-    verify(mStatisticsView)?.setProgressIndicator(false)
-    verify(mStatisticsView)?.showStatistics(1, 2)
+    verify(mStatisticsView).setProgressIndicator(false)
+    verify(mStatisticsView).showStatistics(1, 2)
   }
 
   @Test
@@ -120,22 +118,18 @@ class StatisticsPresenterTest {
     setTasksNotAvailable()
 
     // When statistics are loaded
-    mStatisticsPresenter!!.subscribe()
+    mStatisticsPresenter.subscribe()
 
     // Then an error message is shown
-    verify(mStatisticsView)?.showLoadingStatisticsError()
+    verify(mStatisticsView).showLoadingStatisticsError()
   }
 
   private fun setTasksAvailable(tasks: List<Task>) {
-    `when`(mTasksRepository!!.tasks).thenReturn(Observable.just(tasks))
+    whenever(mTasksRepository.tasks).thenReturn(Observable.just(tasks))
   }
 
   private fun setTasksNotAvailable() {
-    `when`(mTasksRepository!!.tasks).thenReturn(Observable.error<List<Task>>(Exception()))
+    whenever(mTasksRepository.tasks).thenReturn(Observable.error<List<Task>>(Exception()))
   }
 
-  companion object {
-
-    private var TASKS: MutableList<Task>? = null
-  }
 }

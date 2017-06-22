@@ -16,14 +16,10 @@
 
 package com.example.android.architecture.blueprints.todoapp.taskdetail
 
-import android.util.Log
 import com.example.android.architecture.blueprints.todoapp.data.Task
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepository
 import com.example.android.architecture.blueprints.todoapp.util.schedulers.BaseSchedulerProvider
-import com.google.common.base.Preconditions.checkNotNull
 import com.google.common.base.Strings
-import rx.functions.Action0
-import rx.functions.Action1
 import rx.subscriptions.CompositeSubscription
 
 /**
@@ -31,25 +27,14 @@ import rx.subscriptions.CompositeSubscription
  * the UI as required.
  */
 class TaskDetailPresenter(private val mTaskId: String?,
-                          tasksRepository: TasksRepository,
-                          taskDetailView: TaskDetailContract.View,
-                          schedulerProvider: BaseSchedulerProvider) : TaskDetailContract.Presenter {
+                          val tasksRepository: TasksRepository,
+                          val taskDetailView: TaskDetailContract.View,
+                          val schedulerProvider: BaseSchedulerProvider) : TaskDetailContract.Presenter {
 
-  private val mTasksRepository: TasksRepository
-
-  private val mTaskDetailView: TaskDetailContract.View
-
-  private val mSchedulerProvider: BaseSchedulerProvider
-
-  private val mSubscriptions: CompositeSubscription
+  private val mSubscriptions: CompositeSubscription = CompositeSubscription()
 
   init {
-    mTasksRepository = checkNotNull(tasksRepository, "tasksRepository cannot be null!")
-    mTaskDetailView = checkNotNull(taskDetailView, "taskDetailView cannot be null!")
-    mSchedulerProvider = checkNotNull(schedulerProvider, "schedulerProvider cannot be null")
-
-    mSubscriptions = CompositeSubscription()
-    mTaskDetailView.setPresenter(this)
+    this.taskDetailView.setPresenter(this)
   }
 
   override fun subscribe() {
@@ -62,58 +47,58 @@ class TaskDetailPresenter(private val mTaskId: String?,
 
   private fun openTask() {
     if (Strings.isNullOrEmpty(mTaskId)) {
-      mTaskDetailView.showMissingTask()
+      taskDetailView.showMissingTask()
       return
     }
 
-    mTaskDetailView.setLoadingIndicator(true)
-    mSubscriptions.add(mTasksRepository
+    taskDetailView.setLoadingIndicator(true)
+    mSubscriptions.add(tasksRepository
         .getTask(mTaskId!!)
-        .subscribeOn(mSchedulerProvider.computation())
-        .observeOn(mSchedulerProvider.ui())
+        .subscribeOn(schedulerProvider.computation())
+        .observeOn(schedulerProvider.ui())
         .subscribe(
             // onNext
             { this.showTask(it) },
             // onError
             { println(it) },
             // onCompleted
-            { mTaskDetailView.setLoadingIndicator(false) }
-        ) )
+            { taskDetailView.setLoadingIndicator(false) }
+        ))
   }
 
   override fun editTask() {
     if (Strings.isNullOrEmpty(mTaskId)) {
-      mTaskDetailView.showMissingTask()
+      taskDetailView.showMissingTask()
       return
     }
-    mTaskDetailView.showEditTask(mTaskId!!)
+    taskDetailView.showEditTask(mTaskId!!)
   }
 
   override fun deleteTask() {
     if (Strings.isNullOrEmpty(mTaskId)) {
-      mTaskDetailView.showMissingTask()
+      taskDetailView.showMissingTask()
       return
     }
-    mTasksRepository.deleteTask(mTaskId!!)
-    mTaskDetailView.showTaskDeleted()
+    tasksRepository.deleteTask(mTaskId!!)
+    taskDetailView.showTaskDeleted()
   }
 
   override fun completeTask() {
     if (Strings.isNullOrEmpty(mTaskId)) {
-      mTaskDetailView.showMissingTask()
+      taskDetailView.showMissingTask()
       return
     }
-    mTasksRepository.completeTask(mTaskId!!)
-    mTaskDetailView.showTaskMarkedComplete()
+    tasksRepository.completeTask(mTaskId!!)
+    taskDetailView.showTaskMarkedComplete()
   }
 
   override fun activateTask() {
     if (Strings.isNullOrEmpty(mTaskId)) {
-      mTaskDetailView.showMissingTask()
+      taskDetailView.showMissingTask()
       return
     }
-    mTasksRepository.activateTask(mTaskId!!)
-    mTaskDetailView.showTaskMarkedActive()
+    tasksRepository.activateTask(mTaskId!!)
+    taskDetailView.showTaskMarkedActive()
   }
 
   private fun showTask(task: Task) {
@@ -121,16 +106,16 @@ class TaskDetailPresenter(private val mTaskId: String?,
     val description = task.description
 
     if (Strings.isNullOrEmpty(title)) {
-      mTaskDetailView.hideTitle()
+      taskDetailView.hideTitle()
     } else {
-      mTaskDetailView.showTitle(title!!)
+      taskDetailView.showTitle(title!!)
     }
 
     if (Strings.isNullOrEmpty(description)) {
-      mTaskDetailView.hideDescription()
+      taskDetailView.hideDescription()
     } else {
-      mTaskDetailView.showDescription(description!!)
+      taskDetailView.showDescription(description!!)
     }
-    mTaskDetailView.showCompletionStatus(task.isCompleted)
+    taskDetailView.showCompletionStatus(task.isCompleted)
   }
 }

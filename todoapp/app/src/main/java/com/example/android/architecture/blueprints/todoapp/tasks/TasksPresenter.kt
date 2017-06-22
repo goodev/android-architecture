@@ -23,7 +23,6 @@ import com.example.android.architecture.blueprints.todoapp.data.source.TasksData
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepository
 import com.example.android.architecture.blueprints.todoapp.util.EspressoIdlingResource
 import com.example.android.architecture.blueprints.todoapp.util.schedulers.BaseSchedulerProvider
-import com.google.common.base.Preconditions.checkNotNull
 import rx.Observable
 import rx.subscriptions.CompositeSubscription
 
@@ -31,15 +30,9 @@ import rx.subscriptions.CompositeSubscription
  * Listens to user actions from the UI ([TasksFragment]), retrieves the data and updates the
  * UI as required.
  */
-class TasksPresenter(tasksRepository: TasksRepository,
-                     tasksView: TasksContract.View,
-                     schedulerProvider: BaseSchedulerProvider) : TasksContract.Presenter {
-
-  private val mTasksRepository: TasksRepository
-
-  private val mTasksView: TasksContract.View
-
-  private val mSchedulerProvider: BaseSchedulerProvider
+class TasksPresenter(val tasksRepository: TasksRepository,
+                     val tasksView: TasksContract.View,
+                     val schedulerProvider: BaseSchedulerProvider) : TasksContract.Presenter {
 
   /**
    * Sets the current task filtering type.
@@ -52,15 +45,10 @@ class TasksPresenter(tasksRepository: TasksRepository,
 
   private var mFirstLoad = true
 
-  private val mSubscriptions: CompositeSubscription
+  private val mSubscriptions: CompositeSubscription = CompositeSubscription()
 
   init {
-    mTasksRepository = checkNotNull(tasksRepository, "tasksRepository cannot be null")
-    mTasksView = checkNotNull(tasksView, "tasksView cannot be null!")
-    mSchedulerProvider = checkNotNull(schedulerProvider, "schedulerProvider cannot be null")
-
-    mSubscriptions = CompositeSubscription()
-    mTasksView.setPresenter(this)
+    tasksView.setPresenter(this)
   }
 
   override fun subscribe() {
@@ -74,7 +62,7 @@ class TasksPresenter(tasksRepository: TasksRepository,
   override fun result(requestCode: Int, resultCode: Int) {
     // If a task was successfully added, show snackbar
     if (AddEditTaskActivity.REQUEST_ADD_TASK == requestCode && Activity.RESULT_OK == resultCode) {
-      mTasksView.showSuccessfullySavedMessage()
+      tasksView.showSuccessfullySavedMessage()
     }
   }
 
@@ -91,10 +79,10 @@ class TasksPresenter(tasksRepository: TasksRepository,
    */
   private fun loadTasks(forceUpdate: Boolean, showLoadingUI: Boolean) {
     if (showLoadingUI) {
-      mTasksView.setLoadingIndicator(true)
+      tasksView.setLoadingIndicator(true)
     }
     if (forceUpdate) {
-      mTasksRepository.refreshTasks()
+      tasksRepository.refreshTasks()
     }
 
     // The network request might be handled in a different thread so make sure Espresso knows
@@ -102,39 +90,31 @@ class TasksPresenter(tasksRepository: TasksRepository,
     EspressoIdlingResource.increment() // App is busy until further notice
 
     mSubscriptions.clear()
-    val subscription = mTasksRepository
+    val subscription = tasksRepository
         .tasks
         .flatMap { tasks -> Observable.from(tasks) }
         .filter { task ->
           when (filtering) {
             TasksFilterType.ACTIVE_TASKS -> {
-              mTasksRepository
-                  .tasks
-                  .flatMap({ Observable.from(it) })
-                  .filter({ it.isActive })
-
-              true
+              task.isActive
             }
 
             TasksFilterType.COMPLETED_TASKS -> {
-              mTasksRepository
-                  .tasks
-                  .flatMap({ Observable.from(it); })
-                  .filter({ it.isCompleted })
+              task.isCompleted
+            }
+
+            TasksFilterType.ALL_TASKS -> {
               true
             }
-            TasksFilterType.ALL_TASKS -> {
-              mTasksRepository
-                  .tasks
-                  .flatMap({ Observable.from(it); })
-                  .filter { true }
+
+            else ->{
               true
             }
           }
         }
         .toList()
-        .subscribeOn(mSchedulerProvider.computation())
-        .observeOn(mSchedulerProvider.ui())
+        .subscribeOn(schedulerProvider.computation())
+        .observeOn(schedulerProvider.ui())
         .doOnTerminate {
           if (!EspressoIdlingResource.idlingResource.isIdleNow()) {
             EspressoIdlingResource.decrement() // Set app as idle.
@@ -142,11 +122,12 @@ class TasksPresenter(tasksRepository: TasksRepository,
         }
         .subscribe(
             // onNext
-            { this.processTasks(it) },
+            { processTasks(it) },
             // onError
-            { throwable -> mTasksView.showLoadingTasksError() }
+            { throwable -> tasksView.showLoadingTasksError() },
             // onCompleted
-        ) { mTasksView.setLoadingIndicator(false) }
+            { tasksView.setLoadingIndicator(false) }
+        )
     mSubscriptions.add(subscription)
   }
 
@@ -156,7 +137,7 @@ class TasksPresenter(tasksRepository: TasksRepository,
       processEmptyTasks()
     } else {
       // Show the list of tasks
-      mTasksView.showTasks(tasks)
+      tasksView.showTasks(tasks)
       // Set the filter label's text.
       showFilterLabel()
     }
@@ -164,46 +145,43 @@ class TasksPresenter(tasksRepository: TasksRepository,
 
   private fun showFilterLabel() {
     when (filtering) {
-      TasksFilterType.ACTIVE_TASKS -> mTasksView.showActiveFilterLabel()
-      TasksFilterType.COMPLETED_TASKS -> mTasksView.showCompletedFilterLabel()
-      else -> mTasksView.showAllFilterLabel()
+      TasksFilterType.ACTIVE_TASKS -> tasksView.showActiveFilterLabel()
+      TasksFilterType.COMPLETED_TASKS -> tasksView.showCompletedFilterLabel()
+      else -> tasksView.showAllFilterLabel()
     }
   }
 
   private fun processEmptyTasks() {
     when (filtering) {
-      TasksFilterType.ACTIVE_TASKS -> mTasksView.showNoActiveTasks()
-      TasksFilterType.COMPLETED_TASKS -> mTasksView.showNoCompletedTasks()
-      else -> mTasksView.showNoTasks()
+      TasksFilterType.ACTIVE_TASKS -> tasksView.showNoActiveTasks()
+      TasksFilterType.COMPLETED_TASKS -> tasksView.showNoCompletedTasks()
+      else -> tasksView.showNoTasks()
     }
   }
 
   override fun addNewTask() {
-    mTasksView.showAddTask()
+    tasksView.showAddTask()
   }
 
   override fun openTaskDetails(requestedTask: Task) {
-    checkNotNull(requestedTask, "requestedTask cannot be null!")
-    mTasksView.showTaskDetailsUi(requestedTask.id)
+    tasksView.showTaskDetailsUi(requestedTask.id)
   }
 
   override fun completeTask(completedTask: Task) {
-    checkNotNull(completedTask, "completedTask cannot be null!")
-    mTasksRepository.completeTask(completedTask)
-    mTasksView.showTaskMarkedComplete()
+    tasksRepository.completeTask(completedTask)
+    tasksView.showTaskMarkedComplete()
     loadTasks(false, false)
   }
 
   override fun activateTask(activeTask: Task) {
-    checkNotNull(activeTask, "activeTask cannot be null!")
-    mTasksRepository.activateTask(activeTask)
-    mTasksView.showTaskMarkedActive()
+    tasksRepository.activateTask(activeTask)
+    tasksView.showTaskMarkedActive()
     loadTasks(false, false)
   }
 
   override fun clearCompletedTasks() {
-    mTasksRepository.clearCompletedTasks()
-    mTasksView.showCompletedTasksCleared()
+    tasksRepository.clearCompletedTasks()
+    tasksView.showCompletedTasksCleared()
     loadTasks(false, false)
   }
 

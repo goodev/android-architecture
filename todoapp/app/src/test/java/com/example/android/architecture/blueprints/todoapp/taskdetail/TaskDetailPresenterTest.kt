@@ -20,18 +20,15 @@ import com.example.android.architecture.blueprints.todoapp.data.Task
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepository
 import com.example.android.architecture.blueprints.todoapp.util.schedulers.BaseSchedulerProvider
 import com.example.android.architecture.blueprints.todoapp.util.schedulers.ImmediateSchedulerProvider
-
+import com.nhaarman.mockito_kotlin.eq
+import com.nhaarman.mockito_kotlin.never
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.whenever
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
-
 import rx.Observable
-
-import org.mockito.Matchers.eq
-import org.mockito.Mockito.never
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 
 /**
  * Unit tests for the implementation of [TaskDetailPresenter]
@@ -39,14 +36,14 @@ import org.mockito.Mockito.`when`
 class TaskDetailPresenterTest {
 
   @Mock
-  private val mTasksRepository: TasksRepository? = null
+  private lateinit var mTasksRepository: TasksRepository
 
   @Mock
-  private val mTaskDetailView: TaskDetailContract.View? = null
+  private lateinit var mTaskDetailView: TaskDetailContract.View
 
-  private var mSchedulerProvider: BaseSchedulerProvider? = null
+  private lateinit var mSchedulerProvider: BaseSchedulerProvider
 
-  private var mTaskDetailPresenter: TaskDetailPresenter? = null
+  private lateinit var mTaskDetailPresenter: TaskDetailPresenter
 
   @Before
   fun setup() {
@@ -55,29 +52,29 @@ class TaskDetailPresenterTest {
     MockitoAnnotations.initMocks(this)
 
     // Make the sure that all schedulers are immediate.
-    mSchedulerProvider = ImmediateSchedulerProvider()
+    mSchedulerProvider = ImmediateSchedulerProvider
 
     // The presenter won't update the view unless it's active.
-    `when`(mTaskDetailView!!.isActive).thenReturn(true)
+    whenever(mTaskDetailView.isActive).thenReturn(true)
   }
 
   @Test
   fun createPresenter_setsThePresenterToView() {
     // Get a reference to the class under test
     mTaskDetailPresenter = TaskDetailPresenter(
-        ACTIVE_TASK.id, mTasksRepository!!, mTaskDetailView!!, mSchedulerProvider!!)
+        ACTIVE_TASK.id, mTasksRepository, mTaskDetailView, mSchedulerProvider)
 
     // Then the presenter is set to the view
-    verify(mTaskDetailView).setPresenter(mTaskDetailPresenter!!)
+    verify(mTaskDetailView).setPresenter(mTaskDetailPresenter)
   }
 
   @Test
   fun getActiveTaskFromRepositoryAndLoadIntoView() {
     // When tasks presenter is asked to open a task
     mTaskDetailPresenter = TaskDetailPresenter(
-        ACTIVE_TASK.id, mTasksRepository!!, mTaskDetailView!!, mSchedulerProvider!!)
+        ACTIVE_TASK.id, mTasksRepository, mTaskDetailView, mSchedulerProvider)
     setTaskAvailable(ACTIVE_TASK)
-    mTaskDetailPresenter!!.subscribe()
+    mTaskDetailPresenter.subscribe()
 
     // Then task is loaded from model, callback is captured and progress indicator is shown
     verify(mTasksRepository).getTask(eq(ACTIVE_TASK.id))
@@ -94,9 +91,9 @@ class TaskDetailPresenterTest {
   @Test
   fun getCompletedTaskFromRepositoryAndLoadIntoView() {
     mTaskDetailPresenter = TaskDetailPresenter(
-        COMPLETED_TASK.id, mTasksRepository!!, mTaskDetailView!!, mSchedulerProvider!!)
+        COMPLETED_TASK.id, mTasksRepository, mTaskDetailView, mSchedulerProvider)
     setTaskAvailable(COMPLETED_TASK)
-    mTaskDetailPresenter!!.subscribe()
+    mTaskDetailPresenter.subscribe()
 
     // Then task is loaded from model, callback is captured and progress indicator is shown
     verify(mTasksRepository).getTask(
@@ -115,8 +112,8 @@ class TaskDetailPresenterTest {
   fun getUnknownTaskFromRepositoryAndLoadIntoView() {
     // When loading of a task is requested with an invalid task ID.
     mTaskDetailPresenter = TaskDetailPresenter(
-        INVALID_TASK_ID, mTasksRepository!!, mTaskDetailView!!, mSchedulerProvider!!)
-    mTaskDetailPresenter!!.subscribe()
+        INVALID_TASK_ID, mTasksRepository, mTaskDetailView, mSchedulerProvider)
+    mTaskDetailPresenter.subscribe()
     verify(mTaskDetailView).showMissingTask()
   }
 
@@ -127,8 +124,8 @@ class TaskDetailPresenterTest {
 
     // When the deletion of a task is requested
     mTaskDetailPresenter = TaskDetailPresenter(
-        task.id, mTasksRepository!!, mTaskDetailView!!, mSchedulerProvider!!)
-    mTaskDetailPresenter!!.deleteTask()
+        task.id, mTasksRepository, mTaskDetailView, mSchedulerProvider)
+    mTaskDetailPresenter.deleteTask()
 
     // Then the repository and the view are notified
     verify(mTasksRepository).deleteTask(task.id)
@@ -140,12 +137,12 @@ class TaskDetailPresenterTest {
     // Given an initialized presenter with an active task
     val task = Task(TITLE_TEST, DESCRIPTION_TEST)
     mTaskDetailPresenter = TaskDetailPresenter(
-        task.id, mTasksRepository!!, mTaskDetailView!!, mSchedulerProvider!!)
+        task.id, mTasksRepository, mTaskDetailView, mSchedulerProvider)
     setTaskAvailable(task)
-    mTaskDetailPresenter!!.subscribe()
+    mTaskDetailPresenter.subscribe()
 
     // When the presenter is asked to complete the task
-    mTaskDetailPresenter!!.completeTask()
+    mTaskDetailPresenter.completeTask()
 
     // Then a request is sent to the task repository and the UI is updated
     verify(mTasksRepository).completeTask(task.id)
@@ -155,14 +152,14 @@ class TaskDetailPresenterTest {
   @Test
   fun activateTask() {
     // Given an initialized presenter with a completed task
-    val task = Task(TITLE_TEST, DESCRIPTION_TEST, true)
+    val task = Task(TITLE_TEST, DESCRIPTION_TEST, isCompleted = true)
     mTaskDetailPresenter = TaskDetailPresenter(
-        task.id, mTasksRepository!!, mTaskDetailView!!, mSchedulerProvider!!)
+        task.id, mTasksRepository, mTaskDetailView, mSchedulerProvider)
     setTaskAvailable(task)
-    mTaskDetailPresenter!!.subscribe()
+    mTaskDetailPresenter.subscribe()
 
     // When the presenter is asked to activate the task
-    mTaskDetailPresenter!!.activateTask()
+    mTaskDetailPresenter.activateTask()
 
     // Then a request is sent to the task repository and the UI is updated
     verify(mTasksRepository).activateTask(task.id)
@@ -173,8 +170,8 @@ class TaskDetailPresenterTest {
   fun activeTaskIsShownWhenEditing() {
     // When the edit of an ACTIVE_TASK is requested
     mTaskDetailPresenter = TaskDetailPresenter(
-        ACTIVE_TASK.id, mTasksRepository!!, mTaskDetailView!!, mSchedulerProvider!!)
-    mTaskDetailPresenter!!.editTask()
+        ACTIVE_TASK.id, mTasksRepository, mTaskDetailView, mSchedulerProvider)
+    mTaskDetailPresenter.editTask()
 
     // Then the view is notified
     verify(mTaskDetailView).showEditTask(ACTIVE_TASK.id)
@@ -184,8 +181,8 @@ class TaskDetailPresenterTest {
   fun invalidTaskIsNotShownWhenEditing() {
     // When the edit of an invalid task id is requested
     mTaskDetailPresenter = TaskDetailPresenter(
-        INVALID_TASK_ID, mTasksRepository!!, mTaskDetailView!!, mSchedulerProvider!!)
-    mTaskDetailPresenter!!.editTask()
+        INVALID_TASK_ID, mTasksRepository, mTaskDetailView, mSchedulerProvider)
+    mTaskDetailPresenter.editTask()
 
     // Then the edit mode is never started
     verify(mTaskDetailView, never()).showEditTask(INVALID_TASK_ID)
@@ -194,7 +191,7 @@ class TaskDetailPresenterTest {
   }
 
   private fun setTaskAvailable(task: Task) {
-    `when`(mTasksRepository!!.getTask(eq(task.id))).thenReturn(Observable.just(task))
+    whenever(mTasksRepository.getTask(eq(task.id))).thenReturn(Observable.just(task))
   }
 
   companion object {
@@ -207,7 +204,7 @@ class TaskDetailPresenterTest {
 
     val ACTIVE_TASK = Task(TITLE_TEST, DESCRIPTION_TEST)
 
-    val COMPLETED_TASK = Task(TITLE_TEST, DESCRIPTION_TEST, true)
+    val COMPLETED_TASK = Task(TITLE_TEST, DESCRIPTION_TEST, isCompleted = true)
   }
 
 }

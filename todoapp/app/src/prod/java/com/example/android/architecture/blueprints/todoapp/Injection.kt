@@ -34,7 +34,6 @@ import com.google.common.base.Preconditions.checkNotNull
 object Injection {
 
   fun provideTasksRepository(context: Context): TasksRepository {
-    checkNotNull(context)
     return TasksRepository.getInstance(TasksRemoteDataSource,
         TasksLocalDataSource.getInstance(context, provideSchedulerProvider()))
   }
