@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright 2017, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ package com.example.android.architecture.blueprints.todoapp
 
 interface BasePresenter {
 
-  fun subscribe()
-
-  fun unsubscribe()
+    fun start()
 
 }

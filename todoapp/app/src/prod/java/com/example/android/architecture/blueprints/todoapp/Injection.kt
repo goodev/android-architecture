@@ -17,28 +17,21 @@
 package com.example.android.architecture.blueprints.todoapp
 
 import android.content.Context
-
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksDataSource
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepository
 import com.example.android.architecture.blueprints.todoapp.data.source.local.TasksLocalDataSource
+import com.example.android.architecture.blueprints.todoapp.data.source.local.ToDoDatabase
 import com.example.android.architecture.blueprints.todoapp.data.source.remote.TasksRemoteDataSource
-import com.example.android.architecture.blueprints.todoapp.util.schedulers.BaseSchedulerProvider
-import com.example.android.architecture.blueprints.todoapp.util.schedulers.SchedulerProvider
-
-import com.google.common.base.Preconditions.checkNotNull
+import com.example.android.architecture.blueprints.todoapp.util.AppExecutors
 
 /**
  * Enables injection of production implementations for
  * [TasksDataSource] at compile time.
  */
 object Injection {
-
-  fun provideTasksRepository(context: Context): TasksRepository {
-    return TasksRepository.getInstance(TasksRemoteDataSource,
-        TasksLocalDataSource.getInstance(context, provideSchedulerProvider()))
-  }
-
-  fun provideSchedulerProvider(): BaseSchedulerProvider {
-    return SchedulerProvider
-  }
+    fun provideTasksRepository(context: Context): TasksRepository {
+        val database = ToDoDatabase.getInstance(context)
+        return TasksRepository.getInstance(TasksRemoteDataSource,
+                TasksLocalDataSource.getInstance(AppExecutors(), database.taskDao()))
+    }
 }

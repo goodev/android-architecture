@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright 2017, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,25 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.example.android.architecture.blueprints.todoapp.tasks
 
 /**
  * Used with the filter spinner in the tasks list.
  */
 enum class TasksFilterType {
-  /**
-   * Do not filter tasks.
-   */
-  ALL_TASKS,
+    /**
+     * Do not filter tasks.
+     */
+    ALL_TASKS,
 
-  /**
-   * Filters only the active (not completed yet) tasks.
-   */
-  ACTIVE_TASKS,
+    /**
+     * Filters only the active (not completed yet) tasks.
+     */
+    ACTIVE_TASKS,
 
-  /**
-   * Filters only the completed tasks.
-   */
-  COMPLETED_TASKS
+    /**
+     * Filters only the completed tasks.
+     */
+    COMPLETED_TASKS
 }

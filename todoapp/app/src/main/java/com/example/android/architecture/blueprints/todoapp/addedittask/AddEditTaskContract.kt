@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright 2017, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,31 +18,31 @@ package com.example.android.architecture.blueprints.todoapp.addedittask
 
 import com.example.android.architecture.blueprints.todoapp.BasePresenter
 import com.example.android.architecture.blueprints.todoapp.BaseView
+import kotlinx.coroutines.Job
 
 /**
  * This specifies the contract between the view and the presenter.
  */
 interface AddEditTaskContract {
 
-  interface View : BaseView<Presenter> {
+    interface View : BaseView<Presenter> {
+        var isActive: Boolean
 
-    fun showEmptyTaskError()
+        fun showEmptyTaskError()
 
-    fun showTasksList()
+        fun showTasksList()
 
-    fun setTitle(title: String)
+        fun setTitle(title: String)
 
-    fun setDescription(description: String)
+        fun setDescription(description: String)
 
-    val isActive: Boolean
-  }
+    }
 
-  interface Presenter : BasePresenter {
+    interface Presenter : BasePresenter {
+        var isDataMissing: Boolean
 
-    fun saveTask(title: String, description: String)
+        fun saveTask(title: String, description: String)
 
-    fun populateTask()
-
-    val isDataMissing: Boolean
-  }
+        fun populateTask():Job
+    }
 }

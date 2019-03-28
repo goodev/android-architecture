@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2017 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,61 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.example.android.architecture.blueprints.todoapp.taskdetail
 
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.Toolbar
+import androidx.appcompat.app.AppCompatActivity
 import com.example.android.architecture.blueprints.todoapp.Injection
 import com.example.android.architecture.blueprints.todoapp.R
-import com.example.android.architecture.blueprints.todoapp.util.addFragmentToActivity
+import com.example.android.architecture.blueprints.todoapp.util.replaceFragmentInActivity
+import com.example.android.architecture.blueprints.todoapp.util.setupActionBar
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 
 /**
  * Displays task details screen.
  */
-class TaskDetailActivity : AppCompatActivity() {
+class TaskDetailActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-    setContentView(R.layout.taskdetail_act)
+        setContentView(R.layout.taskdetail_act)
 
-    // Set up the toolbar.
-    val toolbar = findViewById(R.id.toolbar) as Toolbar
-    setSupportActionBar(toolbar)
-    val ab = supportActionBar
-    ab?.let {
-      ab.setDisplayHomeAsUpEnabled(true)
-      ab.setDisplayShowHomeEnabled(true)
+        // Set up the toolbar.
+        setupActionBar(R.id.toolbar) {
+            setDisplayHomeAsUpEnabled(true)
+            setDisplayShowHomeEnabled(true)
+        }
+
+        // Get the requested task id
+        val taskId = intent.getStringExtra(EXTRA_TASK_ID)
+
+        val taskDetailFragment = supportFragmentManager
+                .findFragmentById(R.id.contentFrame) as TaskDetailFragment?
+                ?: TaskDetailFragment.newInstance(taskId).also {
+                    replaceFragmentInActivity(it, R.id.contentFrame)
+                }
+        // Create the presenter
+        TaskDetailPresenter(taskId, Injection.provideTasksRepository(applicationContext),
+                taskDetailFragment, this)
     }
 
-    // Get the requested task id
-    val taskId = intent.getStringExtra(EXTRA_TASK_ID)
-
-    var taskDetailFragment: TaskDetailFragment? = supportFragmentManager
-        .findFragmentById(R.id.contentFrame) as TaskDetailFragment?
-
-    if (taskDetailFragment == null) {
-      taskDetailFragment = TaskDetailFragment.newInstance(taskId)
-
-      addFragmentToActivity(taskDetailFragment, R.id.contentFrame)
+    override fun onDestroy() {
+        super.onDestroy()
+        cancel()
     }
 
-    // Create the presenter
-    TaskDetailPresenter(
-        taskId,
-        Injection.provideTasksRepository(applicationContext),
-        taskDetailFragment,
-        Injection.provideSchedulerProvider())
-  }
+    override fun onSupportNavigateUp(): Boolean {
+        onBackPressed()
+        return true
+    }
 
-  override fun onSupportNavigateUp(): Boolean {
-    onBackPressed()
-    return true
-  }
-
-  companion object {
-    const val EXTRA_TASK_ID = "TASK_ID"
-  }
+    companion object {
+        const val EXTRA_TASK_ID = "TASK_ID"
+    }
 }

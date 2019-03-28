@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright 2017, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.example.android.architecture.blueprints.todoapp.tasks
 
 import android.content.Context
-import android.support.v4.view.ViewCompat
-import android.support.v4.widget.SwipeRefreshLayout
+import androidx.core.view.ViewCompat
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import android.util.AttributeSet
 import android.view.View
 
@@ -30,22 +29,12 @@ import android.view.View
  * the refresh only when the view is on top. This class adds a way (@link #setScrollUpChild} to
  * define which view controls this behavior.
  */
-class ScrollChildSwipeRefreshLayout : SwipeRefreshLayout {
+class ScrollChildSwipeRefreshLayout @JvmOverloads constructor(context: Context,
+        attrs: AttributeSet? = null)
+    : androidx.swiperefreshlayout.widget.SwipeRefreshLayout(context, attrs) {
 
-  private var mScrollUpChild: View? = null
+    var scrollUpChild: View? = null
 
-  constructor(context: Context) : super(context) {}
-
-  constructor(context: Context, attrs: AttributeSet) : super(context, attrs) {}
-
-  override fun canChildScrollUp(): Boolean {
-    if (mScrollUpChild != null) {
-      return ViewCompat.canScrollVertically(mScrollUpChild, -1)
-    }
-    return super.canChildScrollUp()
-  }
-
-  fun setScrollUpChild(view: View) {
-    mScrollUpChild = view
-  }
+    override fun canChildScrollUp() =
+            scrollUpChild?.canScrollVertically(-1) ?: super.canChildScrollUp()
 }

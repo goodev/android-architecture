@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright (C) 2017 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,68 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.example.android.architecture.blueprints.todoapp.statistics
 
-import android.support.v4.util.Pair
-import com.example.android.architecture.blueprints.todoapp.data.Task
+
+import com.example.android.architecture.blueprints.todoapp.data.source.Result
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepository
 import com.example.android.architecture.blueprints.todoapp.util.EspressoIdlingResource
-import com.example.android.architecture.blueprints.todoapp.util.schedulers.BaseSchedulerProvider
-import rx.Observable
-import rx.subscriptions.CompositeSubscription
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * Listens to user actions from the UI ([StatisticsFragment]), retrieves the data and updates
  * the UI as required.
  */
-class StatisticsPresenter(val tasksRepository: TasksRepository,
-                          val statisticsView: StatisticsContract.View,
-                          val schedulerProvider: BaseSchedulerProvider) : StatisticsContract.Presenter {
+class StatisticsPresenter(
+        private val tasksRepository: TasksRepository,
+        private val statisticsView: StatisticsContract.View,
+        private val coroutineScope: CoroutineScope
+) : StatisticsContract.Presenter {
 
-  private val mSubscriptions: CompositeSubscription = CompositeSubscription()
+    init {
+        statisticsView.presenter = this
+    }
 
-  init {
-    this.statisticsView.setPresenter(this)
-  }
+    override fun start() {
+        loadStatistics()
+    }
 
-  override fun subscribe() {
-    loadStatistics()
-  }
+    private fun loadStatistics() = coroutineScope.launch {
+        statisticsView.setProgressIndicator(true)
 
-  override fun unsubscribe() {
-    mSubscriptions.clear()
-  }
+        // The network request might be handled in a different thread so make sure Espresso knows
+        // that the app is busy until the response is handled.
+        EspressoIdlingResource.increment() // App is busy until further notice
 
-  private fun loadStatistics() {
-    statisticsView.setProgressIndicator(true)
+        val result = tasksRepository.getTasks()
+        if (result is Result.Success) {
+            // We calculate number of active and completed tasks
+            val completedTasks = result.data.filter { it.isCompleted }.size
+            val activeTasks = result.data.size - completedTasks
 
-    // The network request might be handled in a different thread so make sure Espresso knows
-    // that the app is busy until the response is handled.
-    EspressoIdlingResource.increment() // App is busy until further notice
+            // This callback may be called twice, once for the cache and once for loading
+            // the data from the server API, so we check before decrementing, otherwise
+            // it throws "Counter has been corrupted!" exception.
+            if (!EspressoIdlingResource.countingIdlingResource.isIdleNow) {
+                EspressoIdlingResource.decrement() // Set app as idle.
+            }
+            // The view may not be able to handle UI updates anymore
+            if (statisticsView.isActive) {
+                statisticsView.setProgressIndicator(false)
+                statisticsView.showStatistics(activeTasks, completedTasks)
+            }
+        } else {
+            if (statisticsView.isActive) {
+                statisticsView.showLoadingStatisticsError()
+            }
 
-    val tasks = tasksRepository
-        .tasks
-        .flatMap<Task>({ Observable.from(it) })
-    val completedTasks = tasks.filter({ it.isCompleted }).count()
-    val activeTasks = tasks.filter({ it.isActive }).count()
-    val subscription = Observable
-        .zip(completedTasks, activeTasks) { completed, active -> Pair.create(active, completed) }
-        .subscribeOn(schedulerProvider.computation())
-        .observeOn(schedulerProvider.ui())
-        .doOnTerminate {
-          if (!EspressoIdlingResource.idlingResource.isIdleNow()) {
-            EspressoIdlingResource.decrement() // Set app as idle.
-          }
         }
-        .subscribe(
-            // onNext
-            { stats -> statisticsView.showStatistics(stats.first, stats.second) },
-            // onError
-            { throwable -> statisticsView.showLoadingStatisticsError() },
-            // onCompleted
-            { statisticsView.setProgressIndicator(false) }
-        )
-    mSubscriptions.add(subscription)
-  }
+    }
 }

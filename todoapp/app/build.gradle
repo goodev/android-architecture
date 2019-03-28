@@ -1,9 +1,10 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
 
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion
-    buildToolsVersion rootProject.ext.buildToolsVersion
 
     defaultConfig {
         applicationId "com.example.android.architecture.blueprints.todomvp"
@@ -12,19 +13,12 @@ android {
         versionCode 1
         versionName "1.0"
 
-        testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
-
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
     buildTypes {
         debug {
-            // Minifying the variant used for tests is not supported when using Jack.
-            minifyEnabled false
+            minifyEnabled true
             // Uses new built-in shrinker http://tools.android.com/tech-docs/new-build-system/built-in-shrinker
             useProguard false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -38,23 +32,25 @@ android {
             testProguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguardTest-rules.pro'
         }
     }
-    flavorDimensions "mode"
+
+    flavorDimensions "default"
+
     // If you need to add more flavors, consider using flavor dimensions.
     productFlavors {
         mock {
             applicationIdSuffix = ".mock"
-            dimension "mode"
+            dimension "default"
         }
         prod {
-            dimension "mode"
+            dimension "default"
         }
     }
 
     // Remove mockRelease as it's not needed.
     android.variantFilter { variant ->
-        if (variant.buildType.name.equals('release')
-                && variant.getFlavors().get(0).name.equals('mock')) {
-            variant.setIgnore(true);
+        if (variant.buildType.name == 'release'
+                && variant.flavors[0].name == 'mock') {
+            variant.ignore = true
         }
     }
 
@@ -72,45 +68,47 @@ android {
  */
 dependencies {
     // App's dependencies, including test
-    implementation "com.android.support:appcompat-v7:$rootProject.supportLibraryVersion"
-    implementation "com.android.support:cardview-v7:$rootProject.supportLibraryVersion"
-    implementation "com.android.support:design:$rootProject.supportLibraryVersion"
-    implementation "com.android.support:recyclerview-v7:$rootProject.supportLibraryVersion"
-    implementation "com.android.support:support-v4:$rootProject.supportLibraryVersion"
-    implementation "com.android.support.test.espresso:espresso-idling-resource:$rootProject.espressoVersion"
-    implementation "com.google.guava:guava:$rootProject.guavaVersion"
-    implementation "io.reactivex:rxjava:$rootProject.rxjavaVersion"
-    implementation "io.reactivex:rxandroid:$rootProject.rxandroidVersion"
-    implementation "com.squareup.sqlbrite:sqlbrite:$rootProject.sqlbriteVersion"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+    implementation "androidx.appcompat:appcompat:$rootProject.supportLibraryVersion"
+    implementation "androidx.cardview:cardview:$rootProject.supportLibraryVersion"
+    implementation "com.google.android.material:material:$rootProject.supportLibraryVersion"
+    implementation "androidx.recyclerview:recyclerview:$rootProject.supportLibraryVersion"
+    implementation "androidx.legacy:legacy-support-v4:$rootProject.supportLibraryVersion"
+    implementation "androidx.test.espresso:espresso-idling-resource:$rootProject.espressoVersion"
+    implementation "androidx.room:room-runtime:$rootProject.roomVersion"
+
+    // Kotlin
+    kapt "androidx.room:room-compiler:$rootProject.roomVersion"
+    implementation "androidx.room:room-ktx:$rootProject.roomVersion"
+
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$rootProject.coroutineVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$rootProject.coroutineVersion"
 
     // Dependencies for local unit tests
     testImplementation "junit:junit:$rootProject.ext.junitVersion"
-    testImplementation "org.mockito:mockito-all:$rootProject.ext.mockitoVersion"
-    testImplementation ("com.nhaarman:mockito-kotlin-kt1.1:1.5.0",{
-        exclude group: 'org.mockito', module: 'mockito-core'
-    })
     testImplementation "org.hamcrest:hamcrest-all:$rootProject.ext.hamcrestVersion"
+    testImplementation "org.mockito:mockito-core:$rootProject.ext.mockitoVersion"
 
     // Android Testing Support Library's runner and rules
-    androidTestImplementation "com.android.support.test:runner:$rootProject.ext.runnerVersion"
-    androidTestImplementation "com.android.support.test:rules:$rootProject.ext.runnerVersion"
+    androidTestImplementation "androidx.test:runner:$rootProject.ext.runnerVersion"
+    androidTestImplementation "androidx.test:rules:$rootProject.ext.runnerVersion"
 
     // Dependencies for Android unit tests
     androidTestImplementation "junit:junit:$rootProject.ext.junitVersion"
-    androidTestImplementation "org.mockito:mockito-core:$rootProject.ext.mockitoVersion"
-    androidTestImplementation 'com.google.dexmaker:dexmaker:1.2'
-    androidTestImplementation 'com.google.dexmaker:dexmaker-mockito:1.2'
+    androidTestImplementation "org.mockito:mockito-android:$rootProject.ext.mockitoVersion"
 
     // Espresso UI Testing
-    androidTestImplementation "com.android.support.test.espresso:espresso-core:$rootProject.espressoVersion"
-    androidTestImplementation "com.android.support.test.espresso:espresso-contrib:$rootProject.espressoVersion"
-    androidTestImplementation "com.android.support.test.espresso:espresso-intents:$rootProject.espressoVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$rootProject.espressoVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-contrib:$rootProject.espressoVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-intents:$rootProject.espressoVersion"
 
     // Resolve conflicts between main and test APK:
-    androidTestImplementation "com.android.support:support-annotations:$rootProject.supportLibraryVersion"
-    androidTestImplementation "com.android.support:support-v4:$rootProject.supportLibraryVersion"
-    androidTestImplementation "com.android.support:recyclerview-v7:$rootProject.supportLibraryVersion"
-    androidTestImplementation "com.android.support:appcompat-v7:$rootProject.supportLibraryVersion"
-    androidTestImplementation "com.android.support:design:$rootProject.supportLibraryVersion"
+    androidTestImplementation "androidx.annotation:annotation:$rootProject.supportLibraryVersion"
+    androidTestImplementation "androidx.legacy:legacy-support-v4:$rootProject.supportLibraryVersion"
+    androidTestImplementation "androidx.recyclerview:recyclerview:$rootProject.supportLibraryVersion"
+    androidTestImplementation "com.google.android.material:material:$rootProject.supportLibraryVersion"
+    androidTestImplementation "androidx.test.espresso.idling:idling-concurrent:$rootProject.espressoVersion"
+    androidTestImplementation "androidx.room:room-testing:$rootProject.roomVersion"
+
+    // Other
+    implementation "com.google.code.findbugs:jsr305:3.0.1"
 }

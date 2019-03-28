@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright 2017, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,34 +18,37 @@ package com.example.android.architecture.blueprints.todoapp.data.source
 
 import com.example.android.architecture.blueprints.todoapp.data.Task
 
-import rx.Observable
-
 /**
  * Main entry point for accessing tasks data.
  *
+ * For simplicity, only getTasks() and getTask() return Result object. Consider adding Result to other
+ * methods to inform the user of network/database errors or successful operations.
+ *
+ * For example, when a new task is created, it's synchronously stored in cache but usually every
+ * operation on database or network should be executed in a different thread.
  *
  */
 interface TasksDataSource {
 
-  val tasks: Observable<List<Task>>
+    suspend fun getTasks(): Result<List<Task>>
 
-  fun getTask(taskId: String): Observable<Task>
+    suspend fun getTask(taskId: String): Result<Task>
 
-  fun saveTask(task: Task)
+    suspend fun saveTask(task: Task)
 
-  fun completeTask(task: Task)
+    suspend fun completeTask(task: Task)
 
-  fun completeTask(taskId: String)
+    suspend fun completeTask(taskId: String)
 
-  fun activateTask(task: Task)
+    suspend fun activateTask(task: Task)
 
-  fun activateTask(taskId: String)
+    suspend fun activateTask(taskId: String)
 
-  fun clearCompletedTasks()
+    suspend fun clearCompletedTasks()
 
-  fun refreshTasks()
+    suspend fun refreshTasks()
 
-  fun deleteAllTasks()
+    suspend fun deleteAllTasks()
 
-  fun deleteTask(taskId: String)
+    suspend fun deleteTask(taskId: String)
 }

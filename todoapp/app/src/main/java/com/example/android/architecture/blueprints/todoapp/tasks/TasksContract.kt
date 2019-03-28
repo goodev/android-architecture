@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright 2017, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,71 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.example.android.architecture.blueprints.todoapp.tasks
 
 import com.example.android.architecture.blueprints.todoapp.BasePresenter
 import com.example.android.architecture.blueprints.todoapp.BaseView
 import com.example.android.architecture.blueprints.todoapp.data.Task
+import kotlinx.coroutines.Job
 
 /**
  * This specifies the contract between the view and the presenter.
  */
 interface TasksContract {
 
-  interface View : BaseView<Presenter> {
+    interface View : BaseView<Presenter> {
 
-    fun setLoadingIndicator(active: Boolean)
+        var isActive: Boolean
 
-    fun showTasks(tasks: List<Task>)
+        fun setLoadingIndicator(active: Boolean)
 
-    fun showAddTask()
+        fun showTasks(tasks: List<Task>)
 
-    fun showTaskDetailsUi(taskId: String)
+        fun showAddTask()
 
-    fun showTaskMarkedComplete()
+        fun showTaskDetailsUi(taskId: String)
 
-    fun showTaskMarkedActive()
+        fun showTaskMarkedComplete()
 
-    fun showCompletedTasksCleared()
+        fun showTaskMarkedActive()
 
-    fun showLoadingTasksError()
+        fun showCompletedTasksCleared()
 
-    fun showNoTasks()
+        fun showLoadingTasksError()
 
-    fun showActiveFilterLabel()
+        fun showNoTasks()
 
-    fun showCompletedFilterLabel()
+        fun showActiveFilterLabel()
 
-    fun showAllFilterLabel()
+        fun showCompletedFilterLabel()
 
-    fun showNoActiveTasks()
+        fun showAllFilterLabel()
 
-    fun showNoCompletedTasks()
+        fun showNoActiveTasks()
 
-    fun showSuccessfullySavedMessage()
+        fun showNoCompletedTasks()
 
-    val isActive: Boolean
+        fun showSuccessfullySavedMessage()
 
-    fun showFilteringPopUpMenu()
-  }
+        fun showFilteringPopUpMenu()
+    }
 
-  interface Presenter : BasePresenter {
+    interface Presenter : BasePresenter {
 
-    fun result(requestCode: Int, resultCode: Int)
+        var currentFiltering: TasksFilterType
 
-    fun loadTasks(forceUpdate: Boolean)
+        fun result(requestCode: Int, resultCode: Int)
 
-    fun addNewTask()
+        fun loadTasks(forceUpdate: Boolean)
 
-    fun openTaskDetails(requestedTask: Task)
+        fun addNewTask()
 
-    fun completeTask(completedTask: Task)
+        fun openTaskDetails(requestedTask: Task)
 
-    fun activateTask(activeTask: Task)
+        fun completeTask(completedTask: Task): Job
 
-    fun clearCompletedTasks()
+        fun activateTask(activeTask: Task): Job
 
-    var filtering: TasksFilterType
-  }
+        fun clearCompletedTasks(): Job
+    }
 }
