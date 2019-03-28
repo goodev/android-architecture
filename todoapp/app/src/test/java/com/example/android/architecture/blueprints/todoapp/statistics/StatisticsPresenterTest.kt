@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright 2017, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,123 +13,112 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.example.android.architecture.blueprints.todoapp.statistics
 
 import com.example.android.architecture.blueprints.todoapp.data.Task
+import com.example.android.architecture.blueprints.todoapp.data.source.DataSourceException
+import com.example.android.architecture.blueprints.todoapp.data.source.Result
+import com.example.android.architecture.blueprints.todoapp.data.source.TasksDataSource
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepository
-import com.example.android.architecture.blueprints.todoapp.util.schedulers.BaseSchedulerProvider
-import com.example.android.architecture.blueprints.todoapp.util.schedulers.ImmediateSchedulerProvider
-import com.google.common.collect.Lists
-import com.nhaarman.mockito_kotlin.whenever
-import com.nhaarman.mockito_kotlin.verify
+import com.example.android.architecture.blueprints.todoapp.util.runBlockingSilent
+import kotlinx.coroutines.experimental.Unconfined
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations
-import rx.Observable
 
 /**
  * Unit tests for the implementation of [StatisticsPresenter]
  */
 class StatisticsPresenterTest {
 
-  @Mock
-  private lateinit var mTasksRepository: TasksRepository
+    @Mock private lateinit var tasksRepository: TasksRepository
+    @Mock private lateinit var statisticsView: StatisticsContract.View
+    private lateinit var statisticsPresenter: StatisticsPresenter
+    private lateinit var tasks: MutableList<Task>
 
-  @Mock
-  private lateinit var mStatisticsView: StatisticsContract.View
+    @Before
+    fun setupStatisticsPresenter() {
+        // Mockito has a very convenient way to inject mocks by using the @Mock annotation. To
+        // inject the mocks in the test the initMocks method needs to be called.
+        MockitoAnnotations.initMocks(this)
 
-  private lateinit var mSchedulerProvider: BaseSchedulerProvider
+        // Get a reference to the class under test
+        statisticsPresenter = StatisticsPresenter(tasksRepository, statisticsView, coroutineScope = Unconfined)
 
-  private lateinit var mStatisticsPresenter: StatisticsPresenter
-  private lateinit var TASKS: MutableList<Task>
+        // The presenter won't update the view unless it's active.
+        `when`(statisticsView.isActive).thenReturn(true)
 
-  @Before
-  fun setupStatisticsPresenter() {
-    // Mockito has a very convenient way to inject mocks by using the @Mock annotation. To
-    // inject the mocks in the test the initMocks method needs to be called.
-    MockitoAnnotations.initMocks(this)
+        // We start the tasks to 3, with one active and two completed
+        tasks = mutableListOf(Task("Title1", "Description1"),
+                Task("Title2", "Description2").apply { isCompleted = true },
+                Task("Title3", "Description3").apply { isCompleted = true })
+    }
 
-    // Make the sure that all schedulers are immediate.
-    mSchedulerProvider = ImmediateSchedulerProvider
+    @Test
+    fun createPresenter_setsThePresenterToView() {
+        // Get a reference to the class under test
+        statisticsPresenter = StatisticsPresenter(tasksRepository, statisticsView, coroutineScope = Unconfined)
 
-    // Get a reference to the class under test
-    mStatisticsPresenter = StatisticsPresenter(mTasksRepository, mStatisticsView,
-        mSchedulerProvider)
+        // Then the presenter is set to the view
+        verify(statisticsView).presenter = statisticsPresenter
+    }
 
-    // The presenter won't update the view unless it's active.
-    whenever(mStatisticsView.isActive).thenReturn(true)
+    @Test
+    fun loadEmptyTasksFromRepository_CallViewToDisplay() = runBlockingSilent {
+        setTasksAvailable(tasksRepository, tasks)
 
-    // We subscribe the tasks to 3, with one active and two completed
-    TASKS = Lists.newArrayList(Task("Title1", "Description1"),
-        Task("Title2", "Description2", isCompleted = true), Task("Title3", "Description3", isCompleted = true))
-  }
+        // Given an initialized StatisticsPresenter with no tasks
+        tasks.clear()
 
-  @Test
-  fun createPresenter_setsThePresenterToView() {
-    // Get a reference to the class under test
-    mStatisticsPresenter = StatisticsPresenter(mTasksRepository, mStatisticsView,
-        mSchedulerProvider)
+        // When loading of Tasks is requested
+        statisticsPresenter.start()
 
-    // Then the presenter is set to the view
-    verify(mStatisticsView).setPresenter(mStatisticsPresenter)
-  }
+        //Then progress indicator is shown
+        verify(statisticsView).setProgressIndicator(true)
 
-  @Test
-  fun loadEmptyTasksFromRepository_CallViewToDisplay() {
-    // Given an initialized StatisticsPresenter with no tasks
-    TASKS.clear()
-    setTasksAvailable(TASKS)
+        // Then progress indicator is hidden and correct data is passed on to the view
+        verify(statisticsView).setProgressIndicator(false)
+        verify(statisticsView).showStatistics(0, 0)
+    }
 
-    // When loading of Tasks is requested
-    mStatisticsPresenter.subscribe()
+    @Test
+    fun loadNonEmptyTasksFromRepository_CallViewToDisplay() = runBlockingSilent {
+        setTasksAvailable(tasksRepository, tasks)
 
-    //Then progress indicator is shown
-    verify(mStatisticsView).setProgressIndicator(true)
+        // Given an initialized StatisticsPresenter with 1 active and 2 completed tasks
 
-    // Callback is captured and invoked with stubbed tasks
-    verify<TasksRepository>(mTasksRepository).tasks
+        // When loading of Tasks is requested
+        statisticsPresenter.start()
 
-    // Then progress indicator is hidden and correct data is passed on to the view
-    verify(mStatisticsView).setProgressIndicator(false)
-    verify(mStatisticsView).showStatistics(0, 0)
-  }
+        //Then progress indicator is shown
+        verify(statisticsView).setProgressIndicator(true)
 
-  @Test
-  fun loadNonEmptyTasksFromRepository_CallViewToDisplay() {
-    // Given an initialized StatisticsPresenter with 1 active and 2 completed tasks
-    setTasksAvailable(TASKS)
 
-    // When loading of Tasks is requested
-    mStatisticsPresenter.subscribe()
+        // Then progress indicator is hidden and correct data is passed on to the view
+        verify(statisticsView).setProgressIndicator(false)
+        verify(statisticsView).showStatistics(1, 2)
+    }
 
-    //Then progress indicator is shown
-    verify(mStatisticsView).setProgressIndicator(true)
+    @Test
+    fun loadStatisticsWhenTasksAreUnavailable_CallErrorToDisplay() = runBlockingSilent {
+        // Tasks data isn't available
+        setTasksNotAvailable(tasksRepository)
 
-    // Then progress indicator is hidden and correct data is passed on to the view
-    verify(mStatisticsView).setProgressIndicator(false)
-    verify(mStatisticsView).showStatistics(1, 2)
-  }
+        // When statistics are loaded
+        statisticsPresenter.start()
 
-  @Test
-  fun loadStatisticsWhenTasksAreUnavailable_CallErrorToDisplay() {
-    // Given that tasks data isn't available
-    setTasksNotAvailable()
+        // Then an error message is shown
+        verify(statisticsView).showLoadingStatisticsError()
+    }
 
-    // When statistics are loaded
-    mStatisticsPresenter.subscribe()
+    private suspend fun setTasksAvailable(dataSource: TasksDataSource, tasks: List<Task>) {
+        `when`(dataSource.getTasks()).thenReturn(Result.Success(tasks))
+    }
 
-    // Then an error message is shown
-    verify(mStatisticsView).showLoadingStatisticsError()
-  }
-
-  private fun setTasksAvailable(tasks: List<Task>) {
-    whenever(mTasksRepository.tasks).thenReturn(Observable.just(tasks))
-  }
-
-  private fun setTasksNotAvailable() {
-    whenever(mTasksRepository.tasks).thenReturn(Observable.error<List<Task>>(Exception()))
-  }
-
+    private suspend fun setTasksNotAvailable(dataSource: TasksDataSource) {
+        `when`(dataSource.getTasks()).thenReturn(Result.Error(DataSourceException()))
+    }
 }

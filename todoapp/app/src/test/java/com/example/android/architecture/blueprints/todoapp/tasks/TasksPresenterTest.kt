@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright 2017, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,169 +13,193 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.example.android.architecture.blueprints.todoapp.tasks
 
+import com.example.android.architecture.blueprints.todoapp.argumentCaptor
+import com.example.android.architecture.blueprints.todoapp.capture
 import com.example.android.architecture.blueprints.todoapp.data.Task
+import com.example.android.architecture.blueprints.todoapp.data.source.TasksDataSource
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepository
-import com.example.android.architecture.blueprints.todoapp.util.schedulers.BaseSchedulerProvider
-import com.example.android.architecture.blueprints.todoapp.util.schedulers.ImmediateSchedulerProvider
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.whenever
+import com.example.android.architecture.blueprints.todoapp.anyMockito
+import com.example.android.architecture.blueprints.todoapp.data.source.DataSourceException
+import com.example.android.architecture.blueprints.todoapp.data.source.Result
+import com.example.android.architecture.blueprints.todoapp.util.runBlockingSilent
+import kotlinx.coroutines.experimental.Unconfined
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
+import org.mockito.Mockito.*
 import org.mockito.MockitoAnnotations
-import rx.Observable
 
 /**
  * Unit tests for the implementation of [TasksPresenter]
  */
 class TasksPresenterTest {
 
-  @Mock
-  private lateinit var mTasksRepository: TasksRepository
+    @Mock private lateinit var tasksRepository: TasksRepository
 
-  @Mock
-  private lateinit var mTasksView: TasksContract.View
+    @Mock private lateinit var tasksView: TasksContract.View
 
-  private lateinit var mSchedulerProvider: BaseSchedulerProvider
+    private lateinit var tasksPresenter: TasksPresenter
 
-  private lateinit var mTasksPresenter: TasksPresenter
+    private lateinit var tasks: List<Task>
 
-  private lateinit var TASKS: List<Task>
+    @Before
+    fun setupTasksPresenter() {
+        // Mockito has a very convenient way to inject mocks by using the @Mock annotation. To
+        // inject the mocks in the test the initMocks method needs to be called.
+        MockitoAnnotations.initMocks(this)
 
-  @Before
-  fun setupTasksPresenter() {
-    // Mockito has a very convenient way to inject mocks by using the @Mock annotation. To
-    // inject the mocks in the test the initMocks method needs to be called.
-    MockitoAnnotations.initMocks(this)
+        // Get a reference to the class under test
+        tasksPresenter = TasksPresenter(tasksRepository, tasksView, coroutineScope = Unconfined)
 
-    // Make the sure that all schedulers are immediate.
-    mSchedulerProvider = ImmediateSchedulerProvider
+        // The presenter won't update the view unless it's active.
+        `when`(tasksView.isActive).thenReturn(true)
 
-    // Get a reference to the class under test
-    mTasksPresenter = TasksPresenter(mTasksRepository, mTasksView, mSchedulerProvider)
+        // We start the tasks to 3, with one active and two completed
+        tasks = mutableListOf(Task("Title1", "Description1"),
+                Task("Title2", "Description2").apply { isCompleted = true },
+                Task("Title3", "Description3").apply { isCompleted = true })
+    }
 
-    // The presenter won't update the view unless it's active.
-    whenever(mTasksView.isActive).thenReturn(true)
+    @Test
+    fun createPresenter_setsThePresenterToView() {
+        // Get a reference to the class under test
+        tasksPresenter = TasksPresenter(tasksRepository, tasksView, coroutineScope = Unconfined)
 
-    // We subscribe the tasks to 3, with one active and two completed
-    TASKS = listOf(Task("Title1", "Description1"),
-        Task("Title2", "Description2", isCompleted = true), Task("Title3", "Description3", isCompleted = true))
-  }
+        // Then the presenter is set to the view
+        verify(tasksView).presenter = tasksPresenter
+    }
 
-  @Test
-  fun createPresenter_setsThePresenterToView() {
-    // Get a reference to the class under test
-    mTasksPresenter = TasksPresenter(mTasksRepository, mTasksView, mSchedulerProvider)
+    @Test
+    fun loadAllTasksFromRepositoryAndLoadIntoView() = runBlockingSilent {
+        setTasksAvailable(tasksRepository, tasks)
 
-    // Then the presenter is set to the view
-    verify(mTasksView).setPresenter(mTasksPresenter)
-  }
+        with(tasksPresenter) {
+            // Given an initialized TasksPresenter with initialized tasks
+            // When loading of Tasks is requested
+            currentFiltering = TasksFilterType.ALL_TASKS
+            loadTasks(true)
+        }
 
-  @Test
-  fun loadAllTasksFromRepositoryAndLoadIntoView() {
-    // Given an initialized TasksPresenter with initialized tasks
-    whenever(mTasksRepository.tasks).thenReturn(Observable.just<List<Task>>(TASKS))
-    // When loading of Tasks is requested
-    mTasksPresenter.filtering = TasksFilterType.ALL_TASKS
-    mTasksPresenter.loadTasks(true)
+        verify(tasksRepository).getTasks()
 
-    // Then progress indicator is shown
-    verify(mTasksView).setLoadingIndicator(true)
-    // Then progress indicator is hidden and all tasks are shown in UI
-    verify(mTasksView).setLoadingIndicator(false)
-  }
+        // Then progress indicator is shown
+        val inOrder = inOrder(tasksView)
+        inOrder.verify(tasksView).setLoadingIndicator(true)
+        // Then progress indicator is hidden and all tasks are shown in UI
+        inOrder.verify(tasksView).setLoadingIndicator(false)
+        val showTasksArgumentCaptor = argumentCaptor<List<Task>>()
+        verify(tasksView).showTasks(capture(showTasksArgumentCaptor))
+        assertTrue(showTasksArgumentCaptor.value.size == 3)
+    }
 
-  @Test
-  fun loadActiveTasksFromRepositoryAndLoadIntoView() {
-    // Given an initialized TasksPresenter with initialized tasks
-    whenever(mTasksRepository.tasks).thenReturn(Observable.just<List<Task>>(TASKS))
-    // When loading of Tasks is requested
-    mTasksPresenter.filtering = TasksFilterType.ACTIVE_TASKS
-    mTasksPresenter.loadTasks(true)
+    @Test
+    fun loadActiveTasksFromRepositoryAndLoadIntoView() = runBlockingSilent {
+        setTasksAvailable(tasksRepository, tasks)
 
-    // Then progress indicator is hidden and active tasks are shown in UI
-    verify(mTasksView).setLoadingIndicator(false)
-  }
+        with(tasksPresenter) {
+            // Given an initialized TasksPresenter with initialized tasks
+            // When loading of Tasks is requested
+            currentFiltering = TasksFilterType.ACTIVE_TASKS
+            loadTasks(true)
+        }
 
-  @Test
-  fun loadCompletedTasksFromRepositoryAndLoadIntoView() {
-    // Given an initialized TasksPresenter with initialized tasks
-    whenever(mTasksRepository.tasks).thenReturn(Observable.just<List<Task>>(TASKS))
-    // When loading of Tasks is requested
-    mTasksPresenter.filtering = TasksFilterType.COMPLETED_TASKS
-    mTasksPresenter.loadTasks(true)
+        // Then progress indicator is hidden and active tasks are shown in UI
+        verify(tasksView).setLoadingIndicator(false)
+        val showTasksArgumentCaptor = argumentCaptor<List<Task>>()
+        verify(tasksView).showTasks(capture(showTasksArgumentCaptor))
+        assertTrue(showTasksArgumentCaptor.value.size == 1)
+    }
 
-    // Then progress indicator is hidden and completed tasks are shown in UI
-    verify(mTasksView).setLoadingIndicator(false)
-  }
+    @Test
+    fun loadCompletedTasksFromRepositoryAndLoadIntoView() = runBlockingSilent {
+        setTasksAvailable(tasksRepository, tasks)
 
-  @Test
-  fun clickOnFab_ShowsAddTaskUi() {
-    // When adding a new task
-    mTasksPresenter.addNewTask()
+        with(tasksPresenter) {
+            // Given an initialized TasksPresenter with initialized tasks
+            // When loading of Tasks is requested
+            currentFiltering = TasksFilterType.COMPLETED_TASKS
+            loadTasks(true)
+        }
 
-    // Then add task UI is shown
-    verify(mTasksView).showAddTask()
-  }
+        // Then progress indicator is hidden and completed tasks are shown in UI
+        verify(tasksView).setLoadingIndicator(false)
+        val showTasksArgumentCaptor = argumentCaptor<List<Task>>()
+        verify(tasksView).showTasks(capture(showTasksArgumentCaptor))
+        assertTrue(showTasksArgumentCaptor.value.size == 2)
+    }
 
-  @Test
-  fun clickOnTask_ShowsDetailUi() {
-    // Given a stubbed active task
-    val requestedTask = Task("Details Requested", "For this task")
+    @Test
+    fun clickOnFab_ShowsAddTaskUi() {
+        // When adding a new task
+        tasksPresenter.addNewTask()
 
-    // When open task details is requested
-    mTasksPresenter.openTaskDetails(requestedTask)
+        // Then add task UI is shown
+        verify(tasksView).showAddTask()
+    }
 
-    // Then task detail UI is shown
-    verify(mTasksView).showTaskDetailsUi(any<String>())
-  }
+    @Test
+    fun clickOnTask_ShowsDetailUi() {
+        // Given a stubbed active task
+        val requestedTask = Task("Details Requested", "For this task")
 
-  @Test
-  fun completeTask_ShowsTaskMarkedComplete() {
-    // Given a stubbed task
-    val task = Task("Details Requested", "For this task")
-    // And no tasks available in the repository
-    whenever(mTasksRepository.tasks).thenReturn(Observable.empty<List<Task>>())
+        // When open task details is requested
+        tasksPresenter.openTaskDetails(requestedTask)
 
-    // When task is marked as complete
-    mTasksPresenter.completeTask(task)
+        // Then task detail UI is shown
+        verify(tasksView).showTaskDetailsUi(anyMockito())
+    }
 
-    // Then repository is called and task marked complete UI is shown
-    verify(mTasksRepository).completeTask(task)
-    verify(mTasksView).showTaskMarkedComplete()
-  }
+    @Test
+    fun completeTask_ShowsTaskMarkedComplete() = runBlockingSilent {
+        // Given a stubbed task
+        val task = Task("Details Requested", "For this task")
 
-  @Test
-  fun activateTask_ShowsTaskMarkedActive() {
-    // Given a stubbed completed task
-    val task = Task("Details Requested", "For this task", isCompleted = true)
-    // And no tasks available in the repository
-    whenever(mTasksRepository.tasks).thenReturn(Observable.empty<List<Task>>())
-    mTasksPresenter.loadTasks(true)
+        // When task is marked as complete
+        tasksPresenter.completeTask(task)
 
-    // When task is marked as activated
-    mTasksPresenter.activateTask(task)
+        // Then repository is called and task marked complete UI is shown
+        verify(tasksRepository).completeTask(task)
+        verify(tasksView).showTaskMarkedComplete()
+    }
 
-    // Then repository is called and task marked active UI is shown
-    verify(mTasksRepository).activateTask(task)
-    verify(mTasksView).showTaskMarkedActive()
-  }
+    @Test
+    fun activateTask_ShowsTaskMarkedActive() = runBlockingSilent {
+        // Given a stubbed completed task
+        val task = Task("Details Requested", "For this task").apply { isCompleted = true }
+        with(tasksPresenter) {
+            loadTasks(true)
 
-  @Test
-  fun errorLoadingTasks_ShowsError() {
-    // Given that no tasks are available in the repository
-    whenever(mTasksRepository.tasks).thenReturn(Observable.error<List<Task>>(Exception()))
+            // When task is marked as activated
+            activateTask(task)
+        }
 
-    // When tasks are loaded
-    mTasksPresenter.filtering = TasksFilterType.ALL_TASKS
-    mTasksPresenter.loadTasks(true)
+        // Then repository is called and task marked active UI is shown
+        verify(tasksRepository).activateTask(task)
+        verify(tasksView).showTaskMarkedActive()
+    }
 
-    // Then an error message is shown
-    verify(mTasksView).showLoadingTasksError()
-  }
+    @Test
+    fun unavailableTasks_ShowsError() = runBlockingSilent {
+        setTasksNotAvailable(tasksRepository)
 
+        with(tasksPresenter) {
+            // When tasks are loaded
+            currentFiltering = TasksFilterType.ALL_TASKS
+            loadTasks(true)
+        }
+
+        // Then an error message is shown
+        verify(tasksView).showLoadingTasksError()
+    }
+
+    private suspend fun setTasksAvailable(dataSource: TasksDataSource, tasks: List<Task>) {
+        `when`(dataSource.getTasks()).thenReturn(Result.Success(tasks))
+    }
+
+    private suspend fun setTasksNotAvailable(dataSource: TasksDataSource) {
+        `when`(dataSource.getTasks()).thenReturn(Result.Error(DataSourceException()))
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright 2017, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,79 +17,70 @@
 package com.example.android.architecture.blueprints.todoapp.addedittask
 
 import android.os.Bundle
-import android.support.annotation.VisibleForTesting
-import android.support.test.espresso.IdlingResource
-import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.Toolbar
+import androidx.appcompat.app.AppCompatActivity
 import com.example.android.architecture.blueprints.todoapp.Injection
 import com.example.android.architecture.blueprints.todoapp.R
-import com.example.android.architecture.blueprints.todoapp.util.EspressoIdlingResource
-import com.example.android.architecture.blueprints.todoapp.util.addFragmentToActivity
+import com.example.android.architecture.blueprints.todoapp.util.replaceFragmentInActivity
+import com.example.android.architecture.blueprints.todoapp.util.setupActionBar
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 
 /**
  * Displays an add or edit task screen.
  */
-class AddEditTaskActivity : AppCompatActivity() {
+class AddEditTaskActivity : AppCompatActivity(),CoroutineScope by MainScope() {
 
-  private lateinit var mAddEditTaskPresenter: AddEditTaskPresenter
+    private lateinit var addEditTaskPresenter: AddEditTaskPresenter
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    setContentView(R.layout.addtask_act)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.addtask_act)
+        val taskId = intent.getStringExtra(AddEditTaskFragment.ARGUMENT_EDIT_TASK_ID)
 
-    // Set up the toolbar.
-    val toolbar = findViewById(R.id.toolbar) as Toolbar
-    setSupportActionBar(toolbar)
-    val actionBar = supportActionBar
-    actionBar?.let {
-      actionBar.setDisplayHomeAsUpEnabled(true)
-      actionBar.setDisplayShowHomeEnabled(true)
+        // Set up the toolbar.
+        setupActionBar(R.id.toolbar) {
+            setDisplayHomeAsUpEnabled(true)
+            setDisplayShowHomeEnabled(true)
+            setTitle(if (taskId == null) R.string.add_task else R.string.edit_task)
+        }
+
+        val addEditTaskFragment =
+                supportFragmentManager.findFragmentById(R.id.contentFrame) as AddEditTaskFragment?
+                        ?: AddEditTaskFragment.newInstance(taskId).also {
+                            replaceFragmentInActivity(it, R.id.contentFrame)
+                        }
+
+        val shouldLoadDataFromRepo =
+        // Prevent the presenter from loading data from the repository if this is a config change.
+        // Data might not have loaded when the config change happen, so we saved the state.
+                savedInstanceState?.getBoolean(SHOULD_LOAD_DATA_FROM_REPO_KEY) ?: true
+
+
+        // Create the presenter
+        addEditTaskPresenter = AddEditTaskPresenter(taskId,
+                Injection.provideTasksRepository(applicationContext), addEditTaskFragment,
+                shouldLoadDataFromRepo, this)
     }
 
-    val taskId = intent.getStringExtra(AddEditTaskFragment.ARGUMENT_EDIT_TASK_ID)
-    var addEditTaskFragment: AddEditTaskFragment? = supportFragmentManager.findFragmentById(R.id.contentFrame) as AddEditTaskFragment?
-    if (addEditTaskFragment == null) {
-      addEditTaskFragment = AddEditTaskFragment.newInstance()
-
-      if (intent.hasExtra(AddEditTaskFragment.ARGUMENT_EDIT_TASK_ID)) {
-        actionBar?.setTitle(R.string.edit_task)
-      } else {
-        actionBar?.setTitle(R.string.add_task)
-      }
-
-      addFragmentToActivity(addEditTaskFragment, R.id.contentFrame)
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(SHOULD_LOAD_DATA_FROM_REPO_KEY, addEditTaskPresenter.isDataMissing)
+        // Save the state so that next time we know if we need to refresh data.
+        super.onSaveInstanceState(outState)
     }
 
-    val shouldLoadDataFromRepo = savedInstanceState?.getBoolean(SHOULD_LOAD_DATA_FROM_REPO_KEY) ?: true
+    override fun onSupportNavigateUp(): Boolean {
+        onBackPressed()
+        return true
+    }
 
-    // Create the presenter
-    mAddEditTaskPresenter = AddEditTaskPresenter(
-        taskId,
-        Injection.provideTasksRepository(applicationContext),
-        addEditTaskFragment,
-        shouldLoadDataFromRepo,
-        Injection.provideSchedulerProvider())
-  }
+    override fun onDestroy() {
+        super.onDestroy()
+        cancel()
+    }
 
-  override fun onSaveInstanceState(outState: Bundle) {
-    // Save the state so that next time we know if we need to refresh data.
-    outState.putBoolean(SHOULD_LOAD_DATA_FROM_REPO_KEY, mAddEditTaskPresenter.isDataMissing)
-    super.onSaveInstanceState(outState)
-  }
-
-  override fun onSupportNavigateUp(): Boolean {
-    onBackPressed()
-    return true
-  }
-
-  val countingIdlingResource: IdlingResource
-    @VisibleForTesting
-    get() = EspressoIdlingResource.idlingResource
-
-  companion object {
-
-   const val REQUEST_ADD_TASK = 1
-
-    const val SHOULD_LOAD_DATA_FROM_REPO_KEY = "SHOULD_LOAD_DATA_FROM_REPO_KEY"
-  }
+    companion object {
+        const val SHOULD_LOAD_DATA_FROM_REPO_KEY = "SHOULD_LOAD_DATA_FROM_REPO_KEY"
+        const val REQUEST_ADD_TASK = 1
+    }
 }

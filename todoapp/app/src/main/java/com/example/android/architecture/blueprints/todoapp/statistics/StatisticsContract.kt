@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright (C) 2017 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.example.android.architecture.blueprints.todoapp.statistics
 
 import com.example.android.architecture.blueprints.todoapp.BasePresenter
@@ -24,16 +23,15 @@ import com.example.android.architecture.blueprints.todoapp.BaseView
  */
 interface StatisticsContract {
 
-  interface View : BaseView<Presenter> {
+    interface View : BaseView<Presenter> {
+        val isActive: Boolean
 
-    fun setProgressIndicator(active: Boolean)
+        fun setProgressIndicator(active: Boolean)
 
-    fun showStatistics(numberOfIncompleteTasks: Int, numberOfCompletedTasks: Int)
+        fun showStatistics(numberOfIncompleteTasks: Int, numberOfCompletedTasks: Int)
 
-    fun showLoadingStatisticsError()
+        fun showLoadingStatisticsError()
+    }
 
-    val isActive: Boolean
-  }
-
-  interface Presenter : BasePresenter
+    interface Presenter : BasePresenter
 }

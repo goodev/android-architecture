@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright 2017, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,52 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.example.android.architecture.blueprints.todoapp.taskdetail
 
 import com.example.android.architecture.blueprints.todoapp.BasePresenter
 import com.example.android.architecture.blueprints.todoapp.BaseView
+import kotlinx.coroutines.Job
 
 /**
  * This specifies the contract between the view and the presenter.
  */
 interface TaskDetailContract {
 
-  interface View : BaseView<Presenter> {
+    interface View : BaseView<Presenter> {
 
-    fun setLoadingIndicator(active: Boolean)
+        val isActive: Boolean
 
-    fun showMissingTask()
+        fun setLoadingIndicator(active: Boolean)
 
-    fun hideTitle()
+        fun showMissingTask()
 
-    fun showTitle(title: String)
+        fun hideTitle()
 
-    fun hideDescription()
+        fun showTitle(title: String)
 
-    fun showDescription(description: String)
+        fun hideDescription()
 
-    fun showCompletionStatus(complete: Boolean)
+        fun showDescription(description: String)
 
-    fun showEditTask(taskId: String)
+        fun showCompletionStatus(complete: Boolean)
 
-    fun showTaskDeleted()
+        fun showEditTask(taskId: String)
 
-    fun showTaskMarkedComplete()
+        fun showTaskDeleted()
 
-    fun showTaskMarkedActive()
+        fun showTaskMarkedComplete()
 
-    val isActive: Boolean
-  }
+        fun showTaskMarkedActive()
+    }
 
-  interface Presenter : BasePresenter {
+    interface Presenter : BasePresenter {
 
-    fun editTask()
+        fun editTask()
 
-    fun deleteTask()
+        fun deleteTask(): Job
 
-    fun completeTask()
+        fun completeTask(): Job
 
-    fun activateTask()
-  }
+        fun activateTask(): Job
+    }
 }

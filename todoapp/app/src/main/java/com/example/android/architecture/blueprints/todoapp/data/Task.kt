@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, The Android Open Source Project
+ * Copyright 2017, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,44 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.example.android.architecture.blueprints.todoapp.data
 
-import com.google.common.base.Strings
-import java.util.*
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import java.util.UUID
 
 /**
- * Immutable model class for a Task.
+ * Model class for a Task.
  *
- * Use this constructor to specify a completed Task if the Task already has an id (copy of
- * another Task).
-
  * @param title       title of the task
- * *
  * @param description description of the task
- * *
  * @param id          id of the task
- * *
- * @param isCompleted   true if the task is completed, false if it's active
  */
-data class Task(val title: String?, val description: String?,
-                val id: String = UUID.randomUUID().toString(), val isCompleted: Boolean = false ){
+@Entity(tableName = "tasks")
+data class Task @JvmOverloads constructor(
+        @ColumnInfo(name = "title") var title: String = "",
+        @ColumnInfo(name = "description") var description: String = "",
+        @PrimaryKey @ColumnInfo(name = "entryid") var id: String = UUID.randomUUID().toString()
+) {
 
+    /**
+     * True if the task is completed, false if it's active.
+     */
+    @ColumnInfo(name = "completed") var isCompleted = false
 
-  val titleForList: String?
-    get() {
-      if (!Strings.isNullOrEmpty(title)) {
-        return title
-      } else {
-        return description
-      }
-    }
+    val titleForList: String
+        get() = if (title.isNotEmpty()) title else description
 
-  val isEmpty: Boolean
-    get() = Strings.isNullOrEmpty(title) && Strings.isNullOrEmpty(description)
+    val isActive
+        get() = !isCompleted
 
-  val isActive: Boolean
-    get() = !isCompleted
-
+    val isEmpty
+        get() = title.isEmpty() && description.isEmpty()
 }
-
